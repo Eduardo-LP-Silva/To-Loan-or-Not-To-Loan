@@ -3,9 +3,8 @@ import matplotlib.pyplot as plt
 
 def analyse_data():
     with open('./files/loan_train.csv') as csv_file:
-        attrs = {'amount': [], 'duration': []}
-        attr_data = {}
-        #payments = amount / duration => Correlated, discard
+        attrs = {'amount': [], 'duration': [], 'payments': []}
+        attr_data = {'status_appr': 0, 'status_rej': 0}
         csv_reader = csv.reader(csv_file, delimiter=';')
         next(csv_reader)
 
@@ -13,8 +12,18 @@ def analyse_data():
             if len(row) == 7:
                 attrs['amount'].append(int(row[3]))
                 attrs['duration'].append(int(row[4]))
+                attrs['payments'].append(int(row[5]))
+                status = int(row[6])
+
+                if status == 1:
+                    attr_data['status_appr'] += 1
+                else:
+                    attr_data['status_rej'] += 1 
             else:
                 print('Loan ID ' + row[0] + ' has missing values')
+
+        for key in attr_data.keys():
+            print(key, str(attr_data[key]), sep=': ')
 
         for attr in attrs.keys():
             attr_array = attrs[attr]
