@@ -35,11 +35,7 @@ def createMatrix(val):
 def k_nn():
     clean_loans = pd.read_csv('./files/loan_train_clean.csv', delimiter=';')
     clean_loans.columns = ['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 'dist. unemploymant rate', 'dist. no. of enterpreneurs per 1000 inhabitants', 'dist. no. of commited crimes', 'status']
-
-    # TODO: ADD NORMALIZATION
-
-    # x_train = data_preparation.normalize_data()
-    train_amount_values = clean_loans.amount.values
+    # train_amount_values = clean_loans.amount.values
     # x_train = createMatrix(train_amount_values)
     x_train = data_preparation.normalize_train_data()
     y_train = clean_loans.status.values
@@ -50,7 +46,7 @@ def k_nn():
 
     test_loans = pd.read_csv('./files/loan_test.csv', delimiter=';')
     test_loans.columns = ['loan_id', 'account_id', 'date', 'amount','duration', 'payments', 'status']
-    test_amount_values = test_loans.amount.values
+    # test_amount_values = test_loans.amount.values
     # x_test = createMatrix(test_amount_values)
     x_test = data_preparation.normalize_test_data()
     y_test = test_loans.status.values
