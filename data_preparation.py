@@ -13,8 +13,8 @@ col_names = ['loan_id', 'amount', 'duration', 'disposition_no', 'junior_card_no'
 # Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
 # ATTENTION: sklearn's train_test_split function should be used instead when possible
 def arrange_train_test_data(attr_data):
-    with open('./files/development.csv') as dev_file, open('./files/train.csv', 'w', newline='') as train_file, open('./files/test.csv', 'w', newline='') as test_file:
-        dev_reader = csv.reader(dev_file, delimiter=';')
+    with open('./files/complete_data.csv') as complete_data_file, open('./files/train.csv', 'w', newline='') as train_file, open('./files/test.csv', 'w', newline='') as test_file:
+        complete_data_reader = csv.reader(complete_data_file, delimiter=';')
         train_writer = csv.writer(train_file, delimiter=';')
         test_writer = csv.writer(test_file, delimiter=';')
 
@@ -25,9 +25,9 @@ def arrange_train_test_data(attr_data):
         train_data_status = [0, 0] # Approved / rejected loan status count
         i = 1
 
-        next(dev_reader)
+        next(complete_data_reader)
 
-        for dev_row in dev_reader:
+        for dev_row in complete_data_reader:
             if i <= train_no:
                 # Train data is not immediately written to csv because it needs to be balanced first
                 train_data.append(dev_row)
@@ -59,34 +59,52 @@ def arrange_train_test_data(attr_data):
 
 
 # Generates new development csv with all relevant data from most csv's
-def arrange_dev_data():
+def arrange_complete_data(train):
     attr_data = du.analyse_data()
     clean_data(attr_data)
+    loan_path = ''
+
+    if train:
+        loan_path = './files/loan_train_clean.csv'
+    else:
+        loan_path = './files/loan_test.csv'
     
-    with open('./files/loan_train_clean.csv') as loans, open('./files/development.csv', 'w', newline='') as dev_file, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions:
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions:
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
         disp_reader = csv.reader(dispositions, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
-        dev_writer = csv.writer(dev_file, delimiter=';')
+        complete_data_writer = csv.writer(complete_data_file, delimiter=';')
         next(loan_reader)
 
-        dev_writer.writerow(col_names)
+        header = col_names.copy()
+
+        if not train:
+            header.pop()
+
+        complete_data_writer.writerow(header)
 
         for loan in loan_reader:
-            status = int(loan[6])
             acc_id = int(loan[1])
             account = du.get_account(accounts, acc_reader, acc_id)
 
             if len(account) == 0:
-                continue
+                if train:
+                    continue
+                else:
+                    print('ERROR IN TESTING - ACCOUNT NOT FOUND FOR ID ' + str(acc_id))
+                    return
 
             dist_id = int(account[1])
             district = du.get_district(districts, dist_reader, dist_id)
 
             if len(district) == 0:
-                continue
+                if train:
+                    continue
+                else:
+                    print('ERROR IN TESTING - DISTRICT NOT FOUND FOR ID ' + str(dist_id))
+                    return
 
             # choose only relevant district data
             dist_data = [district[3], district[4], district[5], district[6], district[7], district[8], district[9], 
@@ -95,7 +113,11 @@ def arrange_dev_data():
             acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
 
             if len(acc_dispositions) == 0:
-                continue
+                if train:
+                    continue
+                else:
+                    print('ERROR IN TESTING - DISPOSITION(S) NOT FOUND FOR ACCOUNT ' + str(acc_id))
+                    return
 
             card_type_nos = du.get_card_types_no(cards, cards_reader, acc_dispositions)
                     
@@ -107,8 +129,11 @@ def arrange_dev_data():
             data_row = [loan[0], loan[3], loan[4]]
             data_row.extend([len(acc_dispositions), card_type_nos[0], card_type_nos[1], card_type_nos[2]])
             data_row.extend(dist_data)
-            data_row.append(loan[6])
-            dev_writer.writerow(data_row)
+
+            if train:
+                data_row.append(loan[6])
+
+            complete_data_writer.writerow(data_row)
         
         arrange_train_test_data(attr_data)
                         
@@ -170,7 +195,7 @@ def clean_loans(attr_data):
                 loan_writer.writerow(row)
 
 def main():
-    arrange_dev_data()
+    arrange_complete_data(True)
 
 if __name__ == '__main__':
     main()
