@@ -40,7 +40,8 @@ def k_nn():
 
     # x_train = data_preparation.normalize_data()
     train_amount_values = clean_loans.amount.values
-    x_train = createMatrix(train_amount_values)
+    # x_train = createMatrix(train_amount_values)
+    x_train = data_preparation.normalize_train_data()
     y_train = clean_loans.status.values
 
     clf = neighbors.KNeighborsClassifier()
@@ -50,12 +51,9 @@ def k_nn():
     test_loans = pd.read_csv('./files/loan_test.csv', delimiter=';')
     test_loans.columns = ['loan_id', 'account_id', 'date', 'amount','duration', 'payments', 'status']
     test_amount_values = test_loans.amount.values
-    x_test = createMatrix(test_amount_values)
+    # x_test = createMatrix(test_amount_values)
+    x_test = data_preparation.normalize_test_data()
     y_test = test_loans.status.values
-
-    # amount_matrix = amount_values.reshape(-1,1)
-    # normalized = preprocessing.MinMaxScaler()
-    # normalized_amount = normalized.fit_transform(amount_matrix)
 
     y_expect = y_test
     y_pred = clf.predict(x_test)

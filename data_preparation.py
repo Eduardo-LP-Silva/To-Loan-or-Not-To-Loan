@@ -71,14 +71,23 @@ def arrange_data():
                 else:
                     print('Loan ' + row[0] + ': Outlier detected, skiping')
 
-def normalize_data():
+def normalize_train_data():
     clean_loans = pd.read_csv('./files/loan_train_clean.csv', delimiter=';')
     clean_loans.columns = ['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 'dist. unemploymant rate', 'dist. no. of enterpreneurs per 1000 inhabitants', 'dist. no. of commited crimes', 'status']
-    amount = clean_loans.amount
-    amount_matrix = amount.values.reshape(-1,1)
+    train_amount = clean_loans.amount
+    amount_matrix = train_amount.values.reshape(-1,1)
     normalized = preprocessing.MinMaxScaler()
-    normalized_amount = normalized.fit_transform(amount_matrix)
-    return normalized_amount
+    normalized_x_train = normalized.fit_transform(amount_matrix)
+    return normalized_x_train
+
+def normalize_test_data():
+    test_loans = pd.read_csv('./files/loan_test.csv', delimiter=';')
+    test_loans.columns = ['loan_id', 'account_id', 'date', 'amount','duration', 'payments', 'status']
+    test_amount = test_loans.amount
+    amount_matrix = test_amount.values.reshape(-1,1)
+    normalized = preprocessing.MinMaxScaler()
+    normalized_x_test = normalized.fit_transform(amount_matrix)
+    return normalized_x_test
 
 # arrange_data()
 # normalize_data()
