@@ -78,6 +78,7 @@ def normalize_data():
     amount_matrix = amount.values.reshape(-1,1)
     normalized = preprocessing.MinMaxScaler()
     normalized_amount = normalized.fit_transform(amount_matrix)
+    return normalized_amount
 
 # arrange_data()
 # normalize_data()
