@@ -55,7 +55,7 @@ def analyse_dispositions():
             if len(disp) == 4:
                 attr_data['disposition_' + disp[3].lower()] += 1
 
-        plot_pie([attr_data['disposition_owner'], attr_data['disposition_disponent']], ['Owner', 'Disponent'], 
+        plot_pie([attr_data['disposition_owner'], attr_data['disposition_disponent']], ['Owner', 'Disponent'],
             'Disposition')
 
 # Analyses training cards csv and produces card type pie chart
@@ -68,7 +68,7 @@ def analyse_cards():
             if len(card) == 4:
                 attr_data['cards_' + card[2]] += 1
 
-        plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior', 
+        plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior',
             'Gold'], 'Card Type')
 
 # Analyses accounts csv and produces statement issuance frequency and disposition number per account pie charts
@@ -237,13 +237,13 @@ def plot_box(attrs, title):
 
         attr_data[attr] = (minThresh, maxThresh)
 
-        print(attr, 'Max: ' + str(max(attr_array)), 'Min: ' + str(min(attr_array)), 
-            'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(attr_data[attr][0]), 
+        print(attr, 'Max: ' + str(max(attr_array)), 'Min: ' + str(min(attr_array)),
+            'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(attr_data[attr][0]),
             'Max.Thresh ' + str(attr_data[attr][1]), sep=' | ')
-        
+
         plt.title(title + ' - ' + attr)
         #plt.show()
-        plt.savefig('./figures/' + title + '_' + attr + '_box.png')
+        # plt.savefig('./figures/' + title + '_' + attr + '_box.png')
         plt.close()
 
 # Draws a pie chart based on a set of sizes / numerical data and respective labels
@@ -253,7 +253,7 @@ def plot_pie(sizes, labels, title):
     loan_chart.axis('equal')
     #plt.show()
     plt.title(title)
-    plt.savefig('./figures/' +  title + '.png')
+    # plt.savefig('./figures/' +  title + '.png')
     plt.close()
 
 def main():

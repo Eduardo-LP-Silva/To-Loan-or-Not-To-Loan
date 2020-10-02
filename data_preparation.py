@@ -1,5 +1,11 @@
 
 import csv
+import pandas as pd # Usei este pq ja conhecia para ser mais rapido, dps posso dar refactor para fazer com o csv tambem
+from pandas import Series, DataFrame
+import scipy
+import sklearn
+from sklearn import preprocessing
+from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
@@ -199,3 +205,36 @@ def main():
 
 if __name__ == '__main__':
     main()
+def normalize_list(list):
+    matrix = list.reshape(-1,1)
+    normalized = preprocessing.MinMaxScaler()
+    normalized_x = normalized.fit_transform(matrix)
+    return normalized_x
+
+def create_normalized_matrix(amount, duration):
+    norm_matrix = []
+    count = 0
+    for am in amount:
+        norm_matrix.append([am[0], duration[count][0]])
+        count = count + 1
+    return norm_matrix
+
+def normalize_train_data():
+    clean_loans = pd.read_csv('./files/loan_train_clean.csv', delimiter=';')
+    clean_loans.columns = ['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 'dist. unemploymant rate', 'dist. no. of enterpreneurs per 1000 inhabitants', 'dist. no. of commited crimes', 'status']
+
+    normalized_amount = normalize_list(clean_loans.amount.values)
+    normalized_duration = normalize_list(clean_loans.duration.values)
+    normalized_x_train = create_normalized_matrix(normalized_amount, normalized_duration)
+    return normalized_x_train
+
+def normalize_test_data():
+    test_loans = pd.read_csv('./files/loan_test.csv', delimiter=';')
+    test_loans.columns = ['loan_id', 'account_id', 'date', 'amount','duration', 'payments', 'status']
+    normalized_amount = normalize_list(test_loans.amount.values)
+    normalized_duration = normalize_list(test_loans.duration.values)
+    normalized_x_test = create_normalized_matrix(normalized_amount, normalized_duration)
+    return normalized_x_test
+
+# arrange_data()
+# normalize_data()
