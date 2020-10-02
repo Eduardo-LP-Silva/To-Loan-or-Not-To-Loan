@@ -11,7 +11,7 @@ attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'm
 def analyse_data():
     calc_missing_values()
     analyse_loans()
-    analyse_accounts()
+    analyse_accounts(False)
     analyse_cards()
     analyse_dispositions()
     analyse_districts()
@@ -71,23 +71,40 @@ def analyse_cards():
         plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior', 
             'Gold'], 'Card Type')
 
-# Analyses accounts csv and produces statement issuance frequency pie chart
-def analyse_accounts():
-    with open('./files/account.csv') as accounts:
+# Analyses accounts csv and produces statement issuance frequency and disposition number per account pie charts
+def analyse_accounts(analyse_dispositions):
+    with open('./files/account.csv') as accounts, open('./files/disp.csv') as dispositions_file:
         acc_reader = csv.reader(accounts, delimiter=';')
+        disp_reader = csv.reader(dispositions_file, delimiter=';')
+        disp_nos = {}
+
         next(acc_reader)
 
         for account in acc_reader:
             if len(account) == 4:
+                acc_id = int(account[0])
+
                 if account[2] == 'monthly issuance':   
                     attr_data['frequency_monthly'] += 1
                 elif account[2] == 'weekly issuance':
                     attr_data['frequency_weekly'] += 1
                 else:
                     attr_data['frequency_transactional'] += 1
+            
+                if analyse_dispositions:
+                    dispositions = get_dispositions(dispositions_file, disp_reader, acc_id)
+                    key = str(len(dispositions))
+
+                    if key in disp_nos:
+                        disp_nos[key] += 1
+                    else:
+                        disp_nos[key] = 1
 
         plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional'], attr_data['frequency_weekly']], 
             ['Monthly', 'After Transaction', 'Weekly'], 'Account Issuance Frequency')
+
+        if analyse_dispositions:
+            plot_pie(disp_nos.values(), disp_nos.keys(), 'Account Dispositions No')
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():

@@ -1,8 +1,17 @@
 
 import csv
-import data_understanding
+import data_understanding as du
+
+# column headers for final training / testing data
+col_names = ['loan_id', 'amount', 'duration', 'disposition_no', 'junior_card_no', 'classic_card_no', 'gold_card_no', 
+    'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 
+    'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 
+    'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 
+    'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of enterpreneurs per 1000 inhabitants', 
+    'dist. no. of commited crimes 96', 'status']
 
 # Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
+# ATTENTION: sklearn's train_test_split function should be used instead when possible
 def arrange_train_test_data(attr_data):
     with open('./files/development.csv') as dev_file, open('./files/train.csv', 'w', newline='') as train_file, open('./files/test.csv', 'w', newline='') as test_file:
         dev_reader = csv.reader(dev_file, delimiter=';')
@@ -51,7 +60,7 @@ def arrange_train_test_data(attr_data):
 
 # Generates new development csv with all relevant data from most csv's
 def arrange_dev_data():
-    attr_data = data_understanding.analyse_data()
+    attr_data = du.analyse_data()
     clean_data(attr_data)
     
     with open('./files/loan_train_clean.csv') as loans, open('./files/development.csv', 'w', newline='') as dev_file, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions:
@@ -59,63 +68,47 @@ def arrange_dev_data():
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
         disp_reader = csv.reader(dispositions, delimiter=';')
+        cards_reader = csv.reader(cards, delimiter=';')
         dev_writer = csv.writer(dev_file, delimiter=';')
         next(loan_reader)
 
-        dev_writer.writerow(['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 
-            'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999',
-            'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000',
-            'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 
-            'dist. unemploymant rate 96', 'dist. no. of enterpreneurs per 1000 inhabitants', 
-            'dist. no. of commited crimes 96', 'disposition_type', 'status'])
+        dev_writer.writerow(col_names)
 
         for loan in loan_reader:
             status = int(loan[6])
             acc_id = int(loan[1])
+            account = du.get_account(accounts, acc_reader, acc_id)
 
-            accounts.seek(0)
-            next(acc_reader)
+            if len(account) == 0:
+                continue
 
-            for account in acc_reader:
-                if len(account) == 4 and int(account[0]) == acc_id:
-                    dist_id = int(account[1])
-                    dist_data = []
-                    disp_type = -1
+            dist_id = int(account[1])
+            district = du.get_district(districts, dist_reader, dist_id)
 
-                    districts.seek(0)
-                    next(dist_reader)
+            if len(district) == 0:
+                continue
 
-                    for district in dist_reader:
-                        if len(district) == 16 and int(district[0]) == dist_id:
-                            dist_data = [district[3], district[4], district[5],
-                                district[6], district[7], district[8], district[9], district[10], district[12],
-                                district[13], district[15]]
+            # choose only relevant district data
+            dist_data = [district[3], district[4], district[5], district[6], district[7], district[8], district[9], 
+                district[10], district[12], district[13], district[15]]
 
-                            '''
-                            train_writer.writerow([loan[0], loan[3], loan[4], district[3], district[4], district[5],
-                                district[6], district[7], district[8], district[9], district[10], district[12],
-                                district[13], district[15], loan[6]])
-                            '''
-                            break
+            acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
 
-                    dispositions.seek(0)
-                    next(disp_reader)
+            if len(acc_dispositions) == 0:
+                continue
 
-                    for disp in disp_reader:
-                        if len(disp) == 4 and int(disp[2]) == acc_id:
-                            disp_type = disp[3]
-                            break
-                            
-                    # Account - Add frequency (categorical)? Seems irrelevant
-                    # Transactions - Add avg monthly balance and avg transaction value for account
-                    # Card - Add Type (Add extra type for None) (categorical)
-                    # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
-                    if len(dist_data) > 0 and disp_type != -1: # if every data point is available add row
-                        data_row = [loan[0], loan[3], loan[4]]
-                        data_row.extend(dist_data)
-                        data_row.append(disp_type)
-                        data_row.append(loan[6])
-                        dev_writer.writerow(data_row)
+            card_type_nos = du.get_card_types_no(cards, cards_reader, acc_dispositions)
+                    
+            # Account - Add frequency (categorical)? Seems irrelevant
+            # Transactions - Add avg monthly balance and avg transaction value for account
+            # Card - Add Owner Type (Add extra type for None) (categorical) ?
+            # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
+            # Add no. of loans rejected (in this account (and other accounts of the same client ?))
+            data_row = [loan[0], loan[3], loan[4]]
+            data_row.extend([len(acc_dispositions), card_type_nos[0], card_type_nos[1], card_type_nos[2]])
+            data_row.extend(dist_data)
+            data_row.append(loan[6])
+            dev_writer.writerow(data_row)
         
         arrange_train_test_data(attr_data)
                         
@@ -176,4 +169,8 @@ def clean_loans(attr_data):
 
                 loan_writer.writerow(row)
 
-arrange_dev_data()
+def main():
+    arrange_dev_data()
+
+if __name__ == '__main__':
+    main()
