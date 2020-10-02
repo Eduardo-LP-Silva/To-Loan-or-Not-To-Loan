@@ -1,8 +1,8 @@
 import csv
 import matplotlib.pyplot as plt
 
-attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'missing_districts': 0, 
-    'missing_dispositions': 0, 'missing_cards': 0, 'missing_accounts': 0, 'frequency_monthly': 0, 
+attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'missing_districts': 0,
+    'missing_dispositions': 0, 'missing_cards': 0, 'missing_accounts': 0, 'frequency_monthly': 0,
     'frequency_transactional': 0, 'cards_classic': 0, 'cards_junior': 0, 'cards_gold': 0, 'disposition_owner': 0,
     'disposition_disponent': 0}
 
@@ -47,7 +47,7 @@ def analyse_dispositions():
             if len(disp) == 4:
                 attr_data['disposition_' + disp[3].lower()] += 1
 
-        plot_pie([attr_data['disposition_owner'], attr_data['disposition_disponent']], ['Owner', 'Disponent'], 
+        plot_pie([attr_data['disposition_owner'], attr_data['disposition_disponent']], ['Owner', 'Disponent'],
             'Disposition')
 
 def analyse_cards():
@@ -59,7 +59,7 @@ def analyse_cards():
             if len(card) == 4:
                 attr_data['cards_' + card[2]] += 1
 
-        plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior', 
+        plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior',
             'Gold'], 'Card Type')
 
 
@@ -70,15 +70,15 @@ def analyse_accounts():
 
         for account in acc_reader:
             if len(account) == 4:
-                if account[2] == 'monthly issuance':   
+                if account[2] == 'monthly issuance':
                     attr_data['frequency_monthly'] += 1
                 else:
                     attr_data['frequency_transactional'] += 1
 
-        plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional']], ['Monthly', 'After Transaction'], 
+        plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional']], ['Monthly', 'After Transaction'],
             'Account Issuance Frequency')
 
-        
+
 def analyse_loans():
     with open('./files/loan_train.csv') as loans:
         attrs = {'amount': [], 'duration': [], 'payments': []}
@@ -111,7 +111,7 @@ def calc_missing_values():
             if len(row) == 7:
                 acc_id = int(row[1])
                 status = int(row[6])
-                missing_vals = {'missing_districts': True, 'missing_dispositions': True, 'missing_cards': True, 
+                missing_vals = {'missing_districts': True, 'missing_dispositions': True, 'missing_cards': True,
                     'missing_accounts': True}
 
                 if status == 1:
@@ -152,7 +152,7 @@ def calc_missing_values():
                                 missing_vals['missing_dispositions'] = False
                                 break
 
-                        
+
                         missing_vals['missing_accounts'] = False
                         break
             else:
@@ -171,13 +171,13 @@ def plot_box(attrs, title):
 
         attr_data[attr] = (minThresh, maxThresh)
 
-        print(attr, 'Max: ' + str(max(attr_array)), 'Min: ' + str(min(attr_array)), 
-            'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(attr_data[attr][0]), 
+        print(attr, 'Max: ' + str(max(attr_array)), 'Min: ' + str(min(attr_array)),
+            'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(attr_data[attr][0]),
             'Max.Thresh ' + str(attr_data[attr][1]), sep=' | ')
-        
+
         plt.title(title + ' - ' + attr)
         #plt.show()
-        plt.savefig('./figures/' + title + '_' + attr + '_box.png')
+        # plt.savefig('./figures/' + title + '_' + attr + '_box.png')
         plt.close()
 
 def plot_pie(sizes, labels, title):
@@ -186,7 +186,7 @@ def plot_pie(sizes, labels, title):
     loan_chart.axis('equal')
     #plt.show()
     plt.title(title)
-    plt.savefig('./figures/' +  title + '.png')
+    # plt.savefig('./figures/' +  title + '.png')
     plt.close()
 
-analyse_data()
+# analyse_data()

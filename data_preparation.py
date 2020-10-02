@@ -1,5 +1,11 @@
 
 import csv
+import pandas as pd # Usei este pq ja conhecia para ser mais rapido, dps posso dar refactor para fazer com o csv tambem
+from pandas import Series, DataFrame
+import scipy
+import sklearn
+from sklearn import preprocessing
+from sklearn.preprocessing import scale
 import data_understanding
 
 def arrange_data():
@@ -11,11 +17,11 @@ def arrange_data():
         attr_data = data_understanding.analyse_data()
         next(loan_reader)
 
-        loan_writer.writerow(['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 
+        loan_writer.writerow(['loan_id', 'amount', 'duration', 'dist. no. of inhabitants',
             'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999',
             'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000',
-            'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 
-            'dist. unemploymant rate 96', 'dist. no. of enterpreneurs per 1000 inhabitants', 
+            'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary',
+            'dist. unemploymant rate 96', 'dist. no. of enterpreneurs per 1000 inhabitants',
             'dist. no. of commited crimes 96', 'status'])
 
         for row in loan_reader:
@@ -27,7 +33,7 @@ def arrange_data():
 
                 # check if any attribute is an outlier
                 for pred_attr in pred_attrs.keys():
-                    if(pred_attrs[pred_attr] < attr_data[pred_attr][0] 
+                    if(pred_attrs[pred_attr] < attr_data[pred_attr][0]
                         or pred_attrs[pred_attr] > attr_data[pred_attr][1]):
                         outlier = True
                         break
@@ -49,12 +55,12 @@ def arrange_data():
                             '''
                             District info
                             code; name; region; no. of inhabitants; no. of municipalities with inhabitants < 499;
-                            no. of municipalities with inhabitants 500-1999; 
+                            no. of municipalities with inhabitants 500-1999;
                             no. of municipalities with inhabitants 2000-9999;
                             no. of municipalities with inhabitants >10000;
                             no. of cities; ratio of urban inhabitants; average salary; unemploymant rate '95;
-                            unemploymant rate '96; no. of enterpreneurs per 1000 inhabitants; 
-                            no. of commited crimes '95; no. of commited crimes '96 
+                            unemploymant rate '96; no. of enterpreneurs per 1000 inhabitants;
+                            no. of commited crimes '95; no. of commited crimes '96
                             '''
                             for district in dist_reader:
                                 if int(district[0]) == dist_id and len(district) == 16:
@@ -65,4 +71,13 @@ def arrange_data():
                 else:
                     print('Loan ' + row[0] + ': Outlier detected, skiping')
 
-arrange_data()
+def normalize_data():
+    clean_loans = pd.read_csv('./files/loan_train_clean.csv', delimiter=';')
+    clean_loans.columns = ['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 'dist. unemploymant rate', 'dist. no. of enterpreneurs per 1000 inhabitants', 'dist. no. of commited crimes', 'status']
+    amount = clean_loans.amount
+    amount_matrix = amount.values.reshape(-1,1)
+    normalized = preprocessing.MinMaxScaler()
+    normalized_amount = normalized.fit_transform(amount_matrix)
+
+# arrange_data()
+# normalize_data()
