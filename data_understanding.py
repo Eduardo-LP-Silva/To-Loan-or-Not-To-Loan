@@ -1,11 +1,13 @@
 import csv
 import matplotlib.pyplot as plt
 
+# Data to be passed to preparation
 attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'missing_districts': 0, 
     'missing_dispositions': 0, 'missing_cards': 0, 'missing_accounts': 0, 'frequency_monthly': 0, 
-    'frequency_transactional': 0, 'cards_classic': 0, 'cards_junior': 0, 'cards_gold': 0, 'disposition_owner': 0,
-    'disposition_disponent': 0}
+    'frequency_transactional': 0, 'frequency_weekly': 0, 'cards_classic': 0, 'cards_junior': 0, 'cards_gold': 0, 
+    'disposition_owner': 0, 'disposition_disponent': 0}
 
+# Analyses csv's data and produces respective statistics
 def analyse_data():
     calc_missing_values()
     analyse_loans()
@@ -15,6 +17,7 @@ def analyse_data():
     analyse_districts()
     return attr_data
 
+# Analyses districts csv and produces box charts for each relevant attribute
 def analyse_districts():
     with open('./files/district.csv') as districts:
         attrs = {'inh': [], 'mun_lt_499': [], 'mun_500_1999': [], 'mun_2000_9999': [], 'mun_gt_10000': [],
@@ -38,6 +41,7 @@ def analyse_districts():
 
         plot_box(attrs, 'Districts')
 
+# Analyses dispositions csv and produces disposition type pie chart
 def analyse_dispositions():
     with open('./files/disp.csv') as dispositions:
         disp_reader = csv.reader(dispositions, delimiter=';')
@@ -50,6 +54,7 @@ def analyse_dispositions():
         plot_pie([attr_data['disposition_owner'], attr_data['disposition_disponent']], ['Owner', 'Disponent'], 
             'Disposition')
 
+# Analyses training cards csv and produces card type pie chart
 def analyse_cards():
     with open('./files/card_train.csv') as cards:
         card_reader = csv.reader(cards, delimiter=';')
@@ -62,7 +67,7 @@ def analyse_cards():
         plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior', 
             'Gold'], 'Card Type')
 
-
+# Analyses accounts csv and produces statement issuance frequency pie chart
 def analyse_accounts():
     with open('./files/account.csv') as accounts:
         acc_reader = csv.reader(accounts, delimiter=';')
@@ -72,13 +77,15 @@ def analyse_accounts():
             if len(account) == 4:
                 if account[2] == 'monthly issuance':   
                     attr_data['frequency_monthly'] += 1
+                elif account[2] == 'weekly issuance':
+                    attr_data['frequency_weekly'] += 1
                 else:
                     attr_data['frequency_transactional'] += 1
 
         plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional']], ['Monthly', 'After Transaction'], 
             'Account Issuance Frequency')
 
-        
+# Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
     with open('./files/loan_train.csv') as loans:
         attrs = {'amount': [], 'duration': [], 'payments': []}
@@ -98,6 +105,7 @@ def analyse_loans():
 
         plot_box(attrs, 'Loans')
 
+# Calculates missing and / or not loan linked values
 def calc_missing_values():
     with open('./files/loan_train.csv') as loans, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/disp.csv') as dispositions, open('./files/district.csv') as districts:
         loans_reader = csv.reader(loans, delimiter=';')
@@ -162,6 +170,7 @@ def calc_missing_values():
             if missing_vals[key]:
                 attr_data[key] += 1
 
+# Draws a box chart based on a set of numerical attributes
 def plot_box(attrs, title):
     for attr in attrs.keys():
         attr_array = attrs[attr]
@@ -180,6 +189,7 @@ def plot_box(attrs, title):
         plt.savefig('./figures/' + title + '_' + attr + '_box.png')
         plt.close()
 
+# Draws a pie chart based on a set of sizes / numerical data and respective labels
 def plot_pie(sizes, labels, title):
     _, loan_chart = plt.subplots()
     loan_chart.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
@@ -188,5 +198,3 @@ def plot_pie(sizes, labels, title):
     plt.title(title)
     plt.savefig('./figures/' +  title + '.png')
     plt.close()
-
-analyse_data()
