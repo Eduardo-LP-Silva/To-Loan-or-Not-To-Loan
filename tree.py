@@ -1,6 +1,7 @@
 import pandas as pd
 import csv
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from sklearn import metrics
@@ -14,7 +15,7 @@ def load_data(train):
     header = dp.col_names.copy()
 
     if train:
-        feature_cols = header[: len(header) - 1]
+        feature_cols = header[1 : len(header) - 1]
         x = data[feature_cols]
         y = data.status
 
@@ -28,7 +29,7 @@ def build_model():
     x, y = load_data(True)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1)
 
-    clf = DecisionTreeClassifier(min_samples_split=2)
+    clf = RandomForestClassifier(min_samples_split=2)
     clf = clf.fit(x_train, y_train)
     y_pred = clf.predict(x_test)
 
@@ -45,12 +46,12 @@ def build_model():
 def get_feature_importance(clf):
     print('\n--- Feature Importance ---\n')
 
-    for i in range(len(clf.feature_importances_) - 1):
-        print(dp.col_names[i] + ': ' + '%.2f' % (clf.feature_importances_[i] * 100) + '%')
+    for i in range(len(clf.feature_importances_)):
+        print(dp.col_names[i + 1] + ': ' + '%.2f' % (clf.feature_importances_[i] * 100) + '%')
 
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
-    tree.plot_tree(clf, feature_names=dp.col_names.copy()[: len(dp.col_names) - 1], class_names=['0', '1'], 
+    tree.plot_tree(clf.estimators_[0], feature_names=dp.col_names.copy()[1 : len(dp.col_names) - 1], class_names=['0', '1'], 
         filled=True)
     fig.savefig('./figures/decision_tree.png')
 
@@ -61,7 +62,9 @@ def run_model(clf):
 
         dp.arrange_complete_data(False)
         x = load_data(False)
-        y_pred = clf.predict(x)
+        loan_ids = x['loan_id'].copy()
+        x = x.drop(['loan_id'], axis=1)
+        y_pred = clf.predict(x,)
 
         for i, row in x.iterrows():
             pred = -2
@@ -71,11 +74,11 @@ def run_model(clf):
             elif int(y_pred[i]) == 1:
                 pred = -1
             
-            pred_writer.writerow([int(row['loan_id']), pred])
+            pred_writer.writerow([int(loan_ids[i]), pred])
 
 def main():
     clf = build_model()
-    #visualize_tree(clf)
+    visualize_tree(clf)
     #run_model(clf)
 
 if __name__ == '__main__':

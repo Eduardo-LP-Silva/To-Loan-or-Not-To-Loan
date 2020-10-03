@@ -8,10 +8,9 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['amount', 'duration', 'disposition_no', 
+col_names = ['loan_id', 'amount', 'duration', 'payments', 'disposition_no', 
     'dist. no. of inhabitants',
-    'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of enterpreneurs per 1000 inhabitants', 
-    'dist. no. of commited crimes 96', 'status']
+    'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96', 'status']
 
 # Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
 # ATTENTION: sklearn's train_test_split function should be used instead when possible
@@ -127,7 +126,7 @@ def arrange_complete_data(train):
             # Card - Add Owner Type (Add extra type for None) (categorical) ?
             # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
             # Add no. of loans rejected (in this account (and other accounts of the same client ?))
-            data_row = [loan[3], loan[4], len(acc_dispositions)]
+            data_row = [loan[0], loan[3], loan[4], loan[5], len(acc_dispositions)]
             data_row.extend(dist_data)
 
             if train:
