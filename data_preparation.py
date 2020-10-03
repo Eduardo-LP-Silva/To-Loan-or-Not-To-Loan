@@ -1,8 +1,7 @@
 
 import csv
-import pandas as pd # Usei este pq ja conhecia para ser mais rapido, dps posso dar refactor para fazer com o csv tambem
+import pandas as pd
 from pandas import Series, DataFrame
-import scipy
 import sklearn
 from sklearn import preprocessing
 from sklearn.preprocessing import scale
@@ -200,11 +199,6 @@ def clean_loans(attr_data):
 
                 loan_writer.writerow(row)
 
-def main():
-    arrange_complete_data(True)
-
-if __name__ == '__main__':
-    main()
 def normalize_list(list):
     matrix = list.reshape(-1,1)
     normalized = preprocessing.MinMaxScaler()
@@ -236,5 +230,10 @@ def normalize_test_data():
     normalized_x_test = create_normalized_matrix(normalized_amount, normalized_duration)
     return normalized_x_test
 
-# arrange_data()
-# normalize_data()
+def main():
+    arrange_complete_data(True)
+    # arrange_data()
+    # normalize_data()
+
+if __name__ == '__main__':
+    main()
