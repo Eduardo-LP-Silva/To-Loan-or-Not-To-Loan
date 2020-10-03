@@ -8,10 +8,8 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['amount', 'duration', 'disposition_no', 'junior_card_no', 'classic_card_no', 'gold_card_no', 
-    'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 
-    'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 
-    'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 
+col_names = ['amount', 'duration', 'disposition_no', 
+    'dist. no. of inhabitants',
     'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of enterpreneurs per 1000 inhabitants', 
     'dist. no. of commited crimes 96', 'status']
 
@@ -112,7 +110,7 @@ def arrange_complete_data(train):
                     return
 
             # choose only relevant district data
-            dist_data = [district[3], district[4], district[5], district[6], district[7], district[8], district[9], 
+            dist_data = [district[3], 
                 district[10], district[12], district[13], district[15]]
 
             acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
@@ -123,16 +121,13 @@ def arrange_complete_data(train):
                 else:
                     print('ERROR IN TESTING - DISPOSITION(S) NOT FOUND FOR ACCOUNT ' + str(acc_id))
                     return
-
-            card_type_nos = du.get_card_types_no(cards, cards_reader, acc_dispositions)
                     
             # Account - Add frequency (categorical)? Seems irrelevant
             # Transactions - Add avg monthly balance and avg transaction value for account
             # Card - Add Owner Type (Add extra type for None) (categorical) ?
             # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
             # Add no. of loans rejected (in this account (and other accounts of the same client ?))
-            data_row = [loan[3], loan[4]]
-            data_row.extend([len(acc_dispositions), card_type_nos[0], card_type_nos[1], card_type_nos[2]])
+            data_row = [loan[3], loan[4], len(acc_dispositions)]
             data_row.extend(dist_data)
 
             if train:
