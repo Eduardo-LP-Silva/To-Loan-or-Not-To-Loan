@@ -2,6 +2,7 @@ import pandas as pd
 import csv
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_auc_score
 from sklearn import metrics
 from sklearn import tree
 import matplotlib.pyplot as plt
@@ -31,11 +32,13 @@ def build_model():
     clf = clf.fit(x_train, y_train)
     y_pred = clf.predict(x_test)
 
+    prob_y = clf.predict_proba(x_test)
+    prob_y = [p[1] for p in prob_y]
+
     get_feature_importance(clf)
 
-    print("Accuracy: ", metrics.accuracy_score(y_test, y_pred))
-
-    visualize_tree(clf)
+    print('\nAccuracy: %.1f' % (metrics.accuracy_score(y_test, y_pred) * 100) + '%')
+    print('AUC Score: %.2f\n' % roc_auc_score(y_test, prob_y))
 
     return clf
 
@@ -72,6 +75,7 @@ def run_model(clf):
 
 def main():
     clf = build_model()
+    #visualize_tree(clf)
     #run_model(clf)
 
 if __name__ == '__main__':
