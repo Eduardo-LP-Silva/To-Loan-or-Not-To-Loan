@@ -8,7 +8,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'duration', 'disposition_no', 'junior_card_no', 'classic_card_no', 'gold_card_no', 
+col_names = ['amount', 'duration', 'disposition_no', 'junior_card_no', 'classic_card_no', 'gold_card_no', 
     'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 
     'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 
     'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 
@@ -131,7 +131,7 @@ def arrange_complete_data(train):
             # Card - Add Owner Type (Add extra type for None) (categorical) ?
             # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
             # Add no. of loans rejected (in this account (and other accounts of the same client ?))
-            data_row = [loan[0], loan[3], loan[4]]
+            data_row = [loan[3], loan[4]]
             data_row.extend([len(acc_dispositions), card_type_nos[0], card_type_nos[1], card_type_nos[2]])
             data_row.extend(dist_data)
 
@@ -139,8 +139,6 @@ def arrange_complete_data(train):
                 data_row.append(loan[6])
 
             complete_data_writer.writerow(data_row)
-        
-        arrange_train_test_data(attr_data)
                         
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):

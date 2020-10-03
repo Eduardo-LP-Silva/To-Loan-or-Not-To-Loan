@@ -29,9 +29,17 @@ def build_model():
     clf = clf.fit(x_train, y_train)
     y_pred = clf.predict(x_test)
 
+    get_feature_importance(clf)
+
     print("Accuracy: ", metrics.accuracy_score(y_test, y_pred))
 
     return clf
+
+def get_feature_importance(clf):
+    print('\n--- Feature Importance ---\n')
+
+    for i in range(len(clf.feature_importances_) - 1):
+        print(dp.col_names[i] + ': ' + '%.2f' % (clf.feature_importances_[i] * 100) + '%')
 
 def run_model(clf):
     with open('./files/prediction.csv', 'w', newline='') as predictions:
@@ -54,7 +62,7 @@ def run_model(clf):
 
 def main():
     clf = build_model()
-    run_model(clf)
+    #run_model(clf)
 
 if __name__ == '__main__':
     main()
