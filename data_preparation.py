@@ -9,21 +9,25 @@ import data_understanding as du
 
 # column headers for final training / testing data
 col_names = ['loan_id', 'amount', 'payments',
-    'dist. no. of inhabitants',
-    'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96', 'status']
+    'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96',
+    'status']
 
 # Generates new development csv with all relevant data from most csv's
 def arrange_complete_data(train):
     attr_data = du.analyse_data()
     clean_data(attr_data)
-    loan_path = ''
+    loan_path, card_path, transaction_path = '', '', ''
 
     if train:
-        loan_path = './files/loan_train_clean.csv'
+        loan_path = './files/loan_train.csv'
+        card_path = './files/card_train.csv'
+        transaction_path = './files/trans_train.csv'
     else:
         loan_path = './files/loan_test.csv'
+        card_path = './files/card_test.csv'
+        transaction_path = './files/trans_test.csv'
     
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions:
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions, open(transaction_path) as transactions: 
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
@@ -61,8 +65,7 @@ def arrange_complete_data(train):
                     return
 
             # choose only relevant district data
-            dist_data = [district[3], 
-                district[10], district[12], district[15]]
+            dist_data = [district[3], district[10], district[12], district[15]]
 
             acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
 
@@ -74,9 +77,6 @@ def arrange_complete_data(train):
                     return
                     
             # Transactions - Add avg monthly balance and avg transaction value for account
-            # Card - Add Owner Type (Add extra type for None) (categorical) ?
-            # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
-            # Add no. of loans rejected (in this account (and other accounts of the same client ?))
             data_row = [loan[0], loan[3], loan[5]]
             data_row.extend(dist_data)
 
@@ -152,7 +152,6 @@ def arrange_train_test_data(attr_data):
                         
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):
-    clean_loans(attr_data)
     clean_dispositions(attr_data)
 
 # Copies dispositions complete records and changes type to binary form
@@ -172,20 +171,6 @@ def clean_dispositions(attr_data):
                     disp[3] = 0
 
                 disp_writer.writerow(disp)
-                
-'''
-def clean_accounts(attr_data):
-    with open('./files/account.csv') as accounts, open('./files/account_clean.csv', 'w', newline='') as accounts_clean:
-        acc_reader = csv.reader(accounts, delimiter=';')
-        acc_writer = csv.writer(accounts_clean, delimiter=';')
-        acc_writer.writerow(next(acc_reader))
-
-        for account in acc_reader:
-            if len(account) == 4:
-                frequency = account[2]
-
-                acc_writer.writerow(account)
-'''
 
 # Copies loans training complete records and changes the status attribute to binary form
 def clean_loans(attr_data):
