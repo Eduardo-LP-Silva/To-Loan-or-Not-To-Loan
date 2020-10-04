@@ -12,19 +12,41 @@ from sklearn import metrics
 import data_preparation
 
 
-def build_prediction(pred):
-    with open('./files/loan_test.csv') as loans, open('./files/prediction.csv', 'w', newline='') as prediction:
-        loan_reader = csv.reader(loans, delimiter=';')
-        prediction_writer = csv.writer(prediction, delimiter=';')
+def build_prediction(clf):
+    with open('./files/prediction.csv', 'w', newline='') as predictions:
+        pred_writer = csv.writer(predictions, delimiter=',')
+        pred_writer.writerow(['Id', 'Predicted'])
 
-        prediction_writer.writerow(['Id', 'Prediction'])
+        data_preparation.arrange_complete_data(False)
+        x = load_data(False)
+        print(x)
+        loan_ids = x['loan_id'].copy()
+        x = x.drop(['loan_id'], axis=1)
+        y_pred = clf.predict(x,)
 
         count = 0
-        for row in loan_reader:
-            if row[0] != 'loan_id':
-                prediction_writer.writerow([row[0],pred[count]])
-                count = count + 1
-        print('Built Prediction File')
+        prediction = 0
+        for id in loan_ids:
+            if int(y_pred[count]) == 0:
+                prediction = 1
+            elif int(y_pred[count]) == 1:
+                prediction = -1
+            pred_writer.writerow([int(id),prediction])
+            count = count + 1
+
+def load_data(train):
+    data = pd.read_csv('./files/complete_data.csv', header=0, delimiter=';')
+    header = data_preparation.col_names.copy()
+
+    if train:
+        feature_cols = header[1 : len(header) - 1]
+        x = data[feature_cols]
+        y = data.status
+
+        return x, y
+    else:
+        header.pop()
+        return data[header]
 
 def createMatrix(val):
     mat = []
@@ -33,29 +55,29 @@ def createMatrix(val):
     return mat
 
 def k_nn():
-    clean_loans = pd.read_csv('./files/loan_train_clean.csv', delimiter=';')
-    clean_loans.columns = ['loan_id', 'amount', 'duration', 'dist. no. of inhabitants', 'dist. no. of municipalities with inhabitants < 499', 'dist. no. of municipalities with inhabitants 500-1999', 'dist. no. of municipalities with inhabitants 2000-9999', 'dist. no. of municipalities with inhabitants >10000', 'dist. no. of cities', 'dist. ratio of urban inhabitants', 'dist. average salary', 'dist. unemploymant rate', 'dist. no. of enterpreneurs per 1000 inhabitants', 'dist. no. of commited crimes', 'status']
-    # train_amount_values = clean_loans.amount.values
-    # x_train = createMatrix(train_amount_values)
-    x_train = data_preparation.normalize_train_data()
-    y_train = clean_loans.status.values
+    data_preparation.arrange_complete_data(True)
+    x, y = load_data(True)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1)
+
+    print('X TRAIN')
+    print(x_train)
+    print('X TEST')
+    print(x_test)
+
+    # x_train = data_preparation.normalize_train_data()
+    # y_train = clean_loans.status.values
 
     clf = neighbors.KNeighborsClassifier()
     clf.fit(x_train, y_train)
     print(clf)
 
-    test_loans = pd.read_csv('./files/loan_test.csv', delimiter=';')
-    test_loans.columns = ['loan_id', 'account_id', 'date', 'amount','duration', 'payments', 'status']
-    # test_amount_values = test_loans.amount.values
-    # x_test = createMatrix(test_amount_values)
-    x_test = data_preparation.normalize_test_data()
-    y_test = test_loans.status.values
+    # x_test = data_preparation.normalize_test_data()
+    # y_test = test_loans.status.values
 
     y_expect = y_test
     y_pred = clf.predict(x_test)
 
     print(y_pred)
-    build_prediction(y_pred)
+    build_prediction(clf)
 
-data_preparation.arrange_data()
 k_nn()
