@@ -15,11 +15,34 @@ def analyse_data():
     analyse_cards()
     analyse_dispositions()
     analyse_districts()
+    #analyse_clients()
 
     for key in attr_data.keys():
         print(key, str(attr_data[key]), sep=': ')
 
     return attr_data
+
+# Analyses the clients csv and produces the number of accounts per client plot
+def analyse_clients():
+    with open('./files/client.csv') as clients, open('./files/disp.csv') as dispositions, open('./files/account.csv') as accounts:
+        clients_reader = csv.reader(clients, delimiter=';')
+        disp_reader = csv.reader(dispositions, delimiter=';')
+        acc_reader = csv.reader(accounts, delimiter=';')
+        client_account_no = {}
+
+        next(clients_reader)
+
+        for client in clients_reader:
+            if len(client) == 3:
+                client_accs = len(get_client_accounts(int(client[0]), dispositions, disp_reader, accounts, acc_reader))
+
+                if client_accs in client_account_no:
+                    client_account_no[client_accs] += 1
+                else:
+                    client_account_no[client_accs] = 1
+
+        plot_pie(client_account_no.values(), client_account_no.keys(), 'Accounts per Client')
+
 
 # Analyses districts csv and produces box charts for each relevant attribute
 def analyse_districts():
@@ -71,13 +94,20 @@ def analyse_cards():
         plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior',
             'Gold'], 'Card Type')
 
-# Analyses accounts csv and produces statement issuance frequency and disposition number per account pie charts
-def analyse_accounts(analyse_dispositions):
-    with open('./files/account.csv') as accounts, open('./files/disp.csv') as dispositions_file:
+# Analyses accounts csv and produces various statistics regarding them
+def analyse_accounts(detailed):
+    with open('./files/account.csv') as accounts, open('./files/disp.csv') as dispositions_file, open('./files/card_train.csv') as cards, open('./files/loan_train.csv') as loans:
         acc_reader = csv.reader(accounts, delimiter=';')
         disp_reader = csv.reader(dispositions_file, delimiter=';')
-        disp_nos = {}
 
+        if detailed:
+            loans_reader = csv.reader(loans, delimiter=';')
+            cards_reader = csv.reader(cards, delimiter=';')
+            disp_nos = {}
+            acc_owner_card = {'none': 0, 'junior': 0, 'classic': 0, 'gold': 0}
+            acc_cards_no = {}
+            acc_loan_no = {}
+            
         next(acc_reader)
 
         for account in acc_reader:
@@ -91,7 +121,7 @@ def analyse_accounts(analyse_dispositions):
                 else:
                     attr_data['frequency_transactional'] += 1
             
-                if analyse_dispositions:
+                if detailed:
                     dispositions = get_dispositions(dispositions_file, disp_reader, acc_id)
                     key = str(len(dispositions))
 
@@ -100,11 +130,32 @@ def analyse_accounts(analyse_dispositions):
                     else:
                         disp_nos[key] = 1
 
+                    acc_owner_card[get_owner_card(cards, cards_reader, dispositions)] += 1
+                    card_no = sum(get_card_types_no(cards, cards_reader, dispositions))
+
+                    if card_no in acc_cards_no:
+                        acc_cards_no[card_no] += 1
+                    else:
+                        acc_cards_no[card_no] = 1
+
+                    acc_loans = len(get_account_loans(loans, loans_reader, acc_id))
+
+                    if acc_loans in acc_loan_no:
+                        acc_loan_no[acc_loans] += 1
+                    else:
+                        acc_loan_no[acc_loans] = 1
+
         plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional'], attr_data['frequency_weekly']], 
             ['Monthly', 'After Transaction', 'Weekly'], 'Account Issuance Frequency')
 
-        if analyse_dispositions:
+        if detailed:
             plot_pie(disp_nos.values(), disp_nos.keys(), 'Account Dispositions No')
+            plot_pie(acc_owner_card.values(), acc_owner_card.keys(), 'Account Owner Card Type')
+            plot_pie([acc_owner_card['none'], 
+                acc_owner_card['junior'] + acc_owner_card['classic'] + acc_owner_card['gold']], ['No', 'Yes'], 
+                'Account Owner Has Card')
+            plot_pie(acc_cards_no.values(), acc_cards_no.keys(), 'Account Card Number')
+            plot_pie(acc_loan_no.values(), acc_loan_no.keys(), 'Loans Per Account')
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
@@ -163,6 +214,39 @@ def calc_missing_values():
             if missing_vals[key]:
                 attr_data[key] += 1
 
+# Returns the accounts associated with a given client
+def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader):
+    accs = []
+
+    disp_file.seek(0)
+    next(disp_reader)
+
+    for disp in disp_reader:
+        if len(disp) == 4 and int(disp[1]) == client_id:
+            acc_id = int(disp[2])
+            acc_file.seek(0)
+            next(acc_reader)
+
+            for acc in acc_reader:
+                if len(acc) == 4 and int(acc[0]) == acc_id:
+                    accs.append(acc)
+                    break
+        
+    return accs
+
+# Returns the loans associated with a given account
+def get_account_loans(loans_file, loans_reader, acc_id):
+    loans_file.seek(0)
+    next(loans_reader)
+
+    loans = []
+
+    for loan in loans_reader:
+        if len(loan) == 7 and int(loan[1]) == acc_id:
+            loans.append(loan)
+
+    return loans
+
 # Returns the (junior_card_no, classic_card_no, gold_card_no) associated with an account given its associated dispositions
 def get_card_types_no(cards_file, cards_reader, dispositions):
     classic_no, junior_no, gold_no = 0, 0, 0
@@ -185,13 +269,26 @@ def get_card_types_no(cards_file, cards_reader, dispositions):
 
     return (junior_no, classic_no, gold_no)
 
-# Returns the (client_id, disposition_id) of the owner of an account given the associated dispositions 
+# Returns the (client_id, disposition_id) of the owner of an account given the ASSOCIATED dispositions 
 def get_account_owner_info(dispositions):
     for disposition in dispositions:
-        if disposition[3] == 'OWNER':
+        if disposition[3] == 'OWNER' or int(disposition[3]) == 1:
             return (int(disposition[1]), int(disposition[0]))
 
     return ()
+
+# Returns the card type (or none) of the owner of an account given the ASSOCIATED dispositions
+def get_owner_card(cards_file, cards_reader, acc_dispositions):
+    owner = get_account_owner_info(acc_dispositions)
+
+    cards_file.seek(0)
+    next(cards_reader)
+
+    for card in cards_reader:
+        if len(owner) == 2 and int(card[1]) == owner[1]:
+            return card[2]
+
+    return 'none'
 
 # Returns the dispositions associated with an account given an account id           
 def get_dispositions(dispositions_file, disp_reader, acc_id):
@@ -243,7 +340,7 @@ def plot_box(attrs, title):
 
         plt.title(title + ' - ' + attr)
         #plt.show()
-        # plt.savefig('./figures/' + title + '_' + attr + '_box.png')
+        plt.savefig('./figures/' + title + '_' + attr + '_box.png')
         plt.close()
 
 # Draws a pie chart based on a set of sizes / numerical data and respective labels
@@ -253,7 +350,7 @@ def plot_pie(sizes, labels, title):
     loan_chart.axis('equal')
     #plt.show()
     plt.title(title)
-    # plt.savefig('./figures/' +  title + '.png')
+    plt.savefig('./figures/' +  title + '.png')
     plt.close()
 
 def main():

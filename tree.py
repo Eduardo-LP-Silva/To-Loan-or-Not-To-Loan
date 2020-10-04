@@ -72,14 +72,7 @@ def run_model(clf):
         y_pred = clf.predict(x)
 
         for i, row in x.iterrows():
-            pred = -2
-
-            if int(y_pred[i]) == 0:
-                pred = 1
-            elif int(y_pred[i]) == 1:
-                pred = -1
-            
-            pred_writer.writerow([int(loan_ids[i]), pred])
+            pred_writer.writerow([int(loan_ids[i]), int(y_pred[i])])
 
 def main():
     clf = build_model()
