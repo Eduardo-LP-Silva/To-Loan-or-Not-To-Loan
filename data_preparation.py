@@ -12,54 +12,6 @@ col_names = ['loan_id', 'amount', 'duration', 'payments', 'disposition_no',
     'dist. no. of inhabitants',
     'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96', 'status']
 
-# Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
-# ATTENTION: sklearn's train_test_split function should be used instead when possible
-def arrange_train_test_data(attr_data):
-    with open('./files/complete_data.csv') as complete_data_file, open('./files/train.csv', 'w', newline='') as train_file, open('./files/test.csv', 'w', newline='') as test_file:
-        complete_data_reader = csv.reader(complete_data_file, delimiter=';')
-        train_writer = csv.writer(train_file, delimiter=';')
-        test_writer = csv.writer(test_file, delimiter=';')
-
-        total_loans = attr_data['loan_status_appr'] + attr_data['loan_status_rej']
-        train_no = (total_loans * 2) // 3
-        test_no = total_loans - train_no
-        train_data = []
-        train_data_status = [0, 0] # Approved / rejected loan status count
-        i = 1
-
-        next(complete_data_reader)
-
-        for dev_row in complete_data_reader:
-            if i <= train_no:
-                # Train data is not immediately written to csv because it needs to be balanced first
-                train_data.append(dev_row)
-
-                # status must always be last attribute
-                if int(dev_row[len(dev_row) - 1]) == 0:
-                    train_data_status[0] += 1
-                else:
-                    train_data_status[1] += 1
-            else:
-                # test data can be written to csv since it must not be altered
-                test_writer.writerow(dev_row)
-                     
-            i += 1
-
-        # make it so there's an equal number of positive and negative training cases
-        max_cases = min(train_data_status)
-        train_data_status = [0, 0]
-
-        for train_row in train_data:
-            status = int(train_row[len(train_row) - 1])
-
-            if status == 0 and train_data_status[0] < max_cases:
-                train_data_status[0] += 1
-                train_writer.writerow(train_row)
-            elif status == 1 and train_data_status[1] < max_cases:
-                train_data_status[1] += 1
-                train_writer.writerow(train_row)
-
-
 # Generates new development csv with all relevant data from most csv's
 def arrange_complete_data(train):
     attr_data = du.analyse_data()
@@ -110,7 +62,7 @@ def arrange_complete_data(train):
 
             # choose only relevant district data
             dist_data = [district[3], 
-                district[10], district[12], district[13], district[15]]
+                district[10], district[12], district[15]]
 
             acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
 
@@ -133,6 +85,53 @@ def arrange_complete_data(train):
                 data_row.append(loan[6])
 
             complete_data_writer.writerow(data_row)
+
+# Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
+# ATTENTION: sklearn's train_test_split function should be used instead when possible
+def arrange_train_test_data(attr_data):
+    with open('./files/complete_data.csv') as complete_data_file, open('./files/train.csv', 'w', newline='') as train_file, open('./files/test.csv', 'w', newline='') as test_file:
+        complete_data_reader = csv.reader(complete_data_file, delimiter=';')
+        train_writer = csv.writer(train_file, delimiter=';')
+        test_writer = csv.writer(test_file, delimiter=';')
+
+        total_loans = attr_data['loan_status_appr'] + attr_data['loan_status_rej']
+        train_no = (total_loans * 2) // 3
+        test_no = total_loans - train_no
+        train_data = []
+        train_data_status = [0, 0] # Approved / rejected loan status count
+        i = 1
+
+        next(complete_data_reader)
+
+        for dev_row in complete_data_reader:
+            if i <= train_no:
+                # Train data is not immediately written to csv because it needs to be balanced first
+                train_data.append(dev_row)
+
+                # status must always be last attribute
+                if int(dev_row[len(dev_row) - 1]) == 0:
+                    train_data_status[0] += 1
+                else:
+                    train_data_status[1] += 1
+            else:
+                # test data can be written to csv since it must not be altered
+                test_writer.writerow(dev_row)
+                     
+            i += 1
+
+        # make it so there's an equal number of positive and negative training cases
+        max_cases = min(train_data_status)
+        train_data_status = [0, 0]
+
+        for train_row in train_data:
+            status = int(train_row[len(train_row) - 1])
+
+            if status == 0 and train_data_status[0] < max_cases:
+                train_data_status[0] += 1
+                train_writer.writerow(train_row)
+            elif status == 1 and train_data_status[1] < max_cases:
+                train_data_status[1] += 1
+                train_writer.writerow(train_row)
                         
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):

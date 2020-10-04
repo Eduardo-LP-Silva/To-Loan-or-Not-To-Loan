@@ -32,7 +32,7 @@ def build_model():
     clf = RandomForestClassifier(min_samples_split=2)
     clf = clf.fit(x_train, y_train)
     y_pred = clf.predict(x_test)
-
+    
     prob_y = clf.predict_proba(x_test)
     prob_y = [p[1] for p in prob_y]
 
@@ -63,8 +63,8 @@ def run_model(clf):
         dp.arrange_complete_data(False)
         x = load_data(False)
         loan_ids = x['loan_id'].copy()
-        x = x.drop(['loan_id'], axis=1)
-        y_pred = clf.predict(x,)
+        x.drop(['loan_id'], axis=1, inplace=True)
+        y_pred = clf.predict(x)
 
         for i, row in x.iterrows():
             pred = -2
@@ -79,7 +79,7 @@ def run_model(clf):
 def main():
     clf = build_model()
     visualize_tree(clf)
-    #run_model(clf)
+    run_model(clf)
 
 if __name__ == '__main__':
     main()
