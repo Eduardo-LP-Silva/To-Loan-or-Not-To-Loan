@@ -8,7 +8,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments', 'disposition_no', 
+col_names = ['loan_id', 'amount', 'payments', 'freq_t', 'freq_w', 'freq_m',
     'dist. no. of inhabitants',
     'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96', 'status']
 
@@ -78,13 +78,31 @@ def arrange_complete_data(train):
             # Card - Add Owner Type (Add extra type for None) (categorical) ?
             # Add binary if account has already taken a previous loan (only one loan per account) (must parse dates)
             # Add no. of loans rejected (in this account (and other accounts of the same client ?))
-            data_row = [loan[0], loan[4], loan[5], len(acc_dispositions)]
+            data_row = [loan[0], loan[4], loan[5]]
             data_row.extend(dist_data)
 
             if train:
                 data_row.append(loan[6])
 
             complete_data_writer.writerow(data_row)
+
+# One hot encodes a single data piece given the possible set of labels 
+def one_hot_encode(labels, data):
+    i = 0
+    encoded = []
+
+    for label in labels:
+        if data == label:
+            encoded.append(1)
+
+            for j in range(len(labels) - 1 - i):
+                encoded.append(0)
+            break
+        else:
+            encoded.append(0)
+            i += 1
+
+    return encoded
 
 # Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
 # ATTENTION: sklearn's train_test_split function should be used instead when possible

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import data_preparation as dp
 import data_understanding
 
+# Loads data from complete_data.csv and returns it in the form of a pandas data frame, depending on the mode (train or test)
 def load_data(train):
     data = pd.read_csv('./files/complete_data.csv', header=0, delimiter=';')
     header = dp.col_names.copy()
@@ -24,6 +25,7 @@ def load_data(train):
         header.pop()
         return data[header]
 
+# Builds the random forest model and calculates the accuracy and AUC score
 def build_model():
     dp.arrange_complete_data(True)
     x, y = load_data(True)
@@ -43,18 +45,21 @@ def build_model():
 
     return clf
 
+# Displays the relevance of each predictive attribute in respect to the final prediction
 def get_feature_importance(clf):
     print('\n--- Feature Importance ---\n')
 
     for i in range(len(clf.feature_importances_)):
         print(dp.col_names[i + 1] + ': ' + '%.2f' % (clf.feature_importances_[i] * 100) + '%')
 
+# Saves an image representing one of the forest's decision trees
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
     tree.plot_tree(clf.estimators_[0], feature_names=dp.col_names.copy()[1 : len(dp.col_names) - 1], class_names=['0', '1'], 
         filled=True)
     fig.savefig('./figures/decision_tree.png')
 
+# Runs the model on the competition data
 def run_model(clf):
     with open('./files/prediction.csv', 'w', newline='') as predictions:
         pred_writer = csv.writer(predictions, delimiter=',')
