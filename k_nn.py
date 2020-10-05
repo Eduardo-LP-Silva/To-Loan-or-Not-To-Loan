@@ -19,20 +19,12 @@ def build_prediction(clf):
 
         data_preparation.arrange_complete_data(False)
         x = load_data(False)
-        print(x)
         loan_ids = x['loan_id'].copy()
-        x = x.drop(['loan_id'], axis=1)
-        y_pred = clf.predict(x,)
+        x.drop(['loan_id'], axis=1, inplace=True)
+        y_pred = clf.predict(x)
 
-        count = 0
-        prediction = 0
-        for id in loan_ids:
-            if int(y_pred[count]) == 0:
-                prediction = 1
-            elif int(y_pred[count]) == 1:
-                prediction = -1
-            pred_writer.writerow([int(id),prediction])
-            count = count + 1
+        for i, row in x.iterrows():
+            pred_writer.writerow([int(loan_ids[i]), int(y_pred[i])])
 
 def load_data(train):
     data = pd.read_csv('./files/complete_data.csv', header=0, delimiter=';')
@@ -64,20 +56,16 @@ def k_nn():
     print('X TEST')
     print(x_test)
 
-    # x_train = data_preparation.normalize_train_data()
-    # y_train = clean_loans.status.values
-
     clf = neighbors.KNeighborsClassifier()
     clf.fit(x_train, y_train)
     print(clf)
-
-    # x_test = data_preparation.normalize_test_data()
-    # y_test = test_loans.status.values
 
     y_expect = y_test
     y_pred = clf.predict(x_test)
 
     print(y_pred)
     build_prediction(clf)
+
+    print(metrics.classification_report(y_expect, y_pred))
 
 k_nn()

@@ -2,9 +2,9 @@ import csv
 import matplotlib.pyplot as plt
 
 # Data to be passed to preparation
-attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'missing_districts': 0, 
-    'missing_dispositions': 0, 'missing_accounts': 0, 'frequency_monthly': 0, 'frequency_transactional': 0, 
-    'frequency_weekly': 0, 'cards_classic': 0, 'cards_junior': 0, 'cards_gold': 0, 'disposition_owner': 0, 
+attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'missing_districts': 0,
+    'missing_dispositions': 0, 'missing_accounts': 0, 'frequency_monthly': 0, 'frequency_transactional': 0,
+    'frequency_weekly': 0, 'cards_classic': 0, 'cards_junior': 0, 'cards_gold': 0, 'disposition_owner': 0,
     'disposition_disponent': 0}
 
 # Analyses csv's data and produces respective statistics
@@ -107,20 +107,20 @@ def analyse_accounts(detailed):
             acc_owner_card = {'none': 0, 'junior': 0, 'classic': 0, 'gold': 0}
             acc_cards_no = {}
             acc_loan_no = {}
-            
+
         next(acc_reader)
 
         for account in acc_reader:
             if len(account) == 4:
                 acc_id = int(account[0])
 
-                if account[2] == 'monthly issuance':   
+                if account[2] == 'monthly issuance':
                     attr_data['frequency_monthly'] += 1
                 elif account[2] == 'weekly issuance':
                     attr_data['frequency_weekly'] += 1
                 else:
                     attr_data['frequency_transactional'] += 1
-            
+
                 if detailed:
                     dispositions = get_dispositions(dispositions_file, disp_reader, acc_id)
                     key = str(len(dispositions))
@@ -145,14 +145,14 @@ def analyse_accounts(detailed):
                     else:
                         acc_loan_no[acc_loans] = 1
 
-        plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional'], attr_data['frequency_weekly']], 
+        plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional'], attr_data['frequency_weekly']],
             ['Monthly', 'After Transaction', 'Weekly'], 'Account Issuance Frequency')
 
         if detailed:
             plot_pie(disp_nos.values(), disp_nos.keys(), 'Account Dispositions No')
             plot_pie(acc_owner_card.values(), acc_owner_card.keys(), 'Account Owner Card Type')
-            plot_pie([acc_owner_card['none'], 
-                acc_owner_card['junior'] + acc_owner_card['classic'] + acc_owner_card['gold']], ['No', 'Yes'], 
+            plot_pie([acc_owner_card['none'],
+                acc_owner_card['junior'] + acc_owner_card['classic'] + acc_owner_card['gold']], ['No', 'Yes'],
                 'Account Owner Has Card')
             plot_pie(acc_cards_no.values(), acc_cards_no.keys(), 'Account Card Number')
             plot_pie(acc_loan_no.values(), acc_loan_no.keys(), 'Loans Per Account')
@@ -170,7 +170,7 @@ def analyse_loans():
                 attrs['amount'].append(int(row[3]))
                 attrs['duration'].append(int(row[4]))
                 attrs['payments'].append(int(row[5]))
-            
+
                 if status == 1:
                     attr_data['loan_status_appr'] += 1
                 else:
@@ -231,7 +231,7 @@ def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader)
                 if len(acc) == 4 and int(acc[0]) == acc_id:
                     accs.append(acc)
                     break
-        
+
     return accs
 
 # Returns the loans associated with a given account
@@ -269,7 +269,7 @@ def get_card_types_no(cards_file, cards_reader, dispositions):
 
     return (junior_no, classic_no, gold_no)
 
-# Returns the (client_id, disposition_id) of the owner of an account given the ASSOCIATED dispositions 
+# Returns the (client_id, disposition_id) of the owner of an account given the ASSOCIATED dispositions
 def get_account_owner_info(dispositions):
     for disposition in dispositions:
         if disposition[3] == 'OWNER' or int(disposition[3]) == 1:
@@ -290,7 +290,7 @@ def get_owner_card(cards_file, cards_reader, acc_dispositions):
 
     return 'none'
 
-# Returns the dispositions associated with an account given an account id           
+# Returns the dispositions associated with an account given an account id
 def get_dispositions(dispositions_file, disp_reader, acc_id):
     dispositions = []
     dispositions_file.seek(0)
@@ -310,7 +310,7 @@ def get_district(districts_file, dist_reader, dist_id):
     for district in dist_reader:
         if len(district) == 16 and int(district[0]) == dist_id:
             return district
-    
+
     return []
 
 # Returns an account given an account id
