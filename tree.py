@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
@@ -33,38 +34,31 @@ def load_data(train):
 def build_model():
     dp.arrange_complete_data(True)
     x, y = load_data(True)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=1, stratify=y)
 
-    # Balance training set
-    x_train_majority = x_train[y_train.values == 1]
-    y_train_majority = y_train[y_train.values == 1]
+    negative_percent_train = (len(y_train[y_train.values == -1]) / len(y_train)) * 100
+    negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
+    positive_test_cases = len(y_test[y_test.values == 1])
+    negative_test_cases = len(y_test[y_test.values == -1])
+    
+    print('\nPositive training cases:' + str(len(y_train[y_train.values == 1])))
+    print('Negative training cases:' + str(len(y_train[y_train.values == -1])))
+    print('Positive test cases:' + str(positive_test_cases))
+    print('Negative test cases:' + str(negative_test_cases))
 
-    x_train_minority = x_train[y_train.values == -1]
-    y_train_minority = y_train[y_train.values == -1]
+    print('\nTraining negative cases ratio: %.2f' % negative_percent_train + '%')
+    print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
 
-    sample_no = int(len(x_train_minority.index))
+    x_train_balanced, y_train_balanced = balance_train_dataset(x_train, y_train, 1.7)
 
-    x_train_majority_downsampled = resample(x_train_majority, replace=False, n_samples=sample_no, random_state=123)
-    y_train_majority_downsampled = resample(y_train_majority, replace=False, n_samples=sample_no, random_state=123)
+    print('\nTraining cases: ' + str(len(x_train_balanced)))
+    print('Test cases: ' + str(len(x_test)))
 
-    x_train_balanced = pd.concat([x_train_majority_downsampled, x_train_minority])
-    y_train_balanced = pd.concat([y_train_majority_downsampled, y_train_minority])
-
-    '''
-    print(x_train_downsampled)
-    print(str(len(x_train_downsampled[y_train_downsampled.values == 1])) + ' | ' + 
-        str(len(x_train_downsampled[y_train_downsampled.values == -1])))
-    print(y_train_downsampled)
-    print(str(len(y_train_downsampled[y_train_downsampled.values == 1])) + ' | ' + 
-        str(len(y_train_downsampled[y_train_downsampled.values == -1])))
-    '''
-
-    clf = RandomForestClassifier(max_features=None, min_samples_split=2, min_samples_leaf=6, max_depth=None, random_state=42)
-    clf = clf.fit(x_train_balanced, y_train_balanced)
+    clf = RandomForestClassifier(max_features=None, min_samples_split=2, min_samples_leaf=5, max_depth=None, random_state=42)
+    clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
 
     cm = confusion_matrix(y_test, y_pred)
-
     plot_confusion_matrix(cm, ['Rejected', 'Approved'])
     
     prob_y = clf.predict_proba(x_test)
@@ -72,10 +66,41 @@ def build_model():
 
     get_feature_importance(clf)
 
-    print('\nAccuracy: %.1f' % (metrics.accuracy_score(y_test, y_pred) * 100) + '%')
-    print('AUC Score: %.2f\n' % roc_auc_score(y_test, prob_y))
+    dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
+
+    print('Accuracy: %.1f' % (metrics.accuracy_score(y_test, y_pred) * 100) + '%')
+    print('AUC Score: %.2f' % roc_auc_score(y_test, prob_y))
 
     return clf
+
+# Builds, trains and evaluates a dummy classifier
+def dummy_classifier(x_train, y_train, x_test, y_test):
+    dummy = DummyClassifier(strategy='most_frequent')
+    dummy.fit(x_train, y_train)
+    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test) * 100) + '%')
+
+# Balances the training set given a ratio
+def balance_train_dataset(x_train, y_train, ratio):
+    x_train_majority = x_train[y_train.values == 1]
+    y_train_majority = y_train[y_train.values == 1]
+
+    x_train_minority = x_train[y_train.values == -1]
+    y_train_minority = y_train[y_train.values == -1]
+
+    sample_no = int(len(x_train_minority.index) * ratio)
+
+    x_train_majority_downsampled = resample(x_train_majority, replace=False, n_samples=sample_no, random_state=123)
+    y_train_majority_downsampled = resample(y_train_majority, replace=False, n_samples=sample_no, random_state=123)
+
+    x_train_balanced = pd.concat([x_train_majority_downsampled, x_train_minority])
+    y_train_balanced = pd.concat([y_train_majority_downsampled, y_train_minority])
+
+    print('\nPositive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+        str(len(x_train_balanced[y_train_balanced.values == -1])))
+    print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+        str(len(y_train_balanced[y_train_balanced.values == -1])))
+
+    return x_train_balanced, y_train_balanced
 
 # Displays the relevance of each predictive attribute in respect to the final prediction
 def get_feature_importance(clf):
