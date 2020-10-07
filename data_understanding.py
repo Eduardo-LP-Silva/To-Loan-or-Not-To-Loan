@@ -1,4 +1,7 @@
 import csv
+import datetime
+import itertools
+import numpy as np
 import matplotlib.pyplot as plt
 
 # Data to be passed to preparation
@@ -16,12 +19,55 @@ def analyse_data():
     analyse_dispositions()
     analyse_districts()
     #analyse_clients()
+    analyse_transactions()
 
+    '''
     for key in attr_data.keys():
         print(key, str(attr_data[key]), sep=': ')
+    '''
 
     return attr_data
 
+# Analyses the transactions csv and produces related statistics and metrics
+def analyse_transactions():
+    with open('./files/trans_train.csv') as transactions:
+        trans_reader = csv.reader(transactions, delimiter=';')
+        trans_types = {}
+        trans_operations = {}
+        trans_ks = {}
+        trans_attrs = {'amount': [], 'balance': []}
+
+        next(trans_reader)
+
+        for trans in trans_reader:
+            if len(trans) == 10: 
+                if trans[3] in trans_types:
+                    trans_types[trans[3]] += 1
+                else:
+                    trans_types[trans[3]] = 0
+
+                trans_op = trans[4] if trans[4] != '' else 'Missing'
+
+                if trans_op in trans_operations:
+                    trans_operations[trans_op] += 1
+                else:
+                    trans_operations[trans_op] = 0
+
+                trans_k = trans[7] if trans[7] != '' else 'Missing'
+
+                if trans_k in trans_ks:
+                    trans_ks[trans_k] += 1
+                else:
+                    trans_ks[trans_k] = 0
+
+                trans_attrs['amount'].append(float(trans[5]))
+                trans_attrs['balance'].append(float(trans[6]))
+
+        plot_pie(trans_types.values(), trans_types.keys(), 'Transaction Types')
+        plot_pie(trans_operations.values(), trans_operations.keys(), 'Transaction Operations')
+        plot_pie(trans_ks.values(), trans_ks.keys(), 'Transaction K Symbols')
+        plot_box(trans_attrs, 'Transaction')
+        
 # Analyses the clients csv and produces the number of accounts per client plot
 def analyse_clients():
     with open('./files/client.csv') as clients, open('./files/disp.csv') as dispositions, open('./files/account.csv') as accounts:
@@ -214,6 +260,40 @@ def calc_missing_values():
             if missing_vals[key]:
                 attr_data[key] += 1
 
+# Parses a YYMMDD date to tuple format
+def parse_date(date):
+    year = '19' + date[:2]
+    month = date[2:4]
+    day = date[4:]
+
+    return (year, month, day)
+
+# Returns the last transaction before a given date
+def get_last_transaction(transactions, date):
+    d1 = datetime.datetime(*date)
+    prior_trans = []
+
+    for trans in transactions:
+        d2 = datetime.datetime(*parse_date(trans[2]))
+
+        if d2 < d1:
+            prior_trans.append(trans)
+
+    return max(prior_trans)
+        
+
+# Returns the transactions associated with an account
+def get_account_transactions(trans_file, trans_reader, acc_id):
+    trans_file.seek(0)
+    next(trans_reader)
+    acc_trans = []
+
+    for trans in trans_reader:
+        if int(trans[1]) == acc_id:
+            acc_trans.append(trans)
+
+    return acc_trans    
+
 # Returns the accounts associated with a given client
 def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader):
     accs = []
@@ -323,6 +403,27 @@ def get_account(accounts_file, acc_reader, acc_id):
             return account
 
     return []
+
+# Plots a confusion matrix
+def plot_confusion_matrix(cm, classes, title):
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+    thresh = cm.max() / 2.
+
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('Actual Values')
+    plt.xlabel('Predicted Values')
+    #plt.show()
+    plt.savefig('./figures/' + title + '_confusion_matrix.png')
 
 # Draws a box chart based on a set of numerical attributes
 def plot_box(attrs, title):

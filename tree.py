@@ -1,6 +1,4 @@
 import csv
-import itertools
-import numpy as np
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -13,7 +11,7 @@ from sklearn import metrics
 from sklearn import tree
 import matplotlib.pyplot as plt
 import data_preparation as dp
-import data_understanding
+import data_understanding as du
 
 # Loads data from complete_data.csv and returns it in the form of a pandas data frame, depending on the mode (train or test)
 def load_data(train):
@@ -59,7 +57,7 @@ def build_model():
     y_pred = clf.predict(x_test)
 
     cm = confusion_matrix(y_test, y_pred)
-    plot_confusion_matrix(cm, ['Rejected', 'Approved'])
+    du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
     
     prob_y = clf.predict_proba(x_test)
     prob_y = [p[1] for p in prob_y]
@@ -115,27 +113,6 @@ def visualize_tree(clf):
     tree.plot_tree(clf.estimators_[0], feature_names=dp.col_names.copy()[1 : len(dp.col_names) - 1], class_names=['0', '1'], 
         filled=True)
     fig.savefig('./figures/decision_tree.png')
-
-# Plots a confusion matrix
-def plot_confusion_matrix(cm, classes):
-    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title('Confusion matrix')
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
-    plt.yticks(tick_marks, classes)
-    thresh = cm.max() / 2.
-
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel('Actual Values')
-    plt.xlabel('Predicted Values')
-    #plt.show()
-    plt.savefig('./figures/decision_tree_confusion_matrix.png')
 
 # Runs the model on the competition data
 def run_model(clf):

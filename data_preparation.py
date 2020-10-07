@@ -77,6 +77,7 @@ def arrange_complete_data(train):
                     return
                     
             # Transactions - Add avg monthly balance and avg transaction value for account
+            # Transactions - Current balance based on last transaction before loan
             data_row = [loan[0], loan[3], loan[5]]
             data_row.extend(dist_data)
 
