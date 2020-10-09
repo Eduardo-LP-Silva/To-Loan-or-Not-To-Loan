@@ -8,7 +8,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments',
+col_names = ['loan_id', 'amount', 'payments', 'disposition_no', 'balance',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96',
     'status']
 
@@ -33,6 +33,7 @@ def arrange_complete_data(train):
         dist_reader = csv.reader(districts, delimiter=';')
         disp_reader = csv.reader(dispositions, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
+        trans_reader = csv.reader(transactions, delimiter=';')
         complete_data_writer = csv.writer(complete_data_file, delimiter=';')
         next(loan_reader)
 
@@ -75,10 +76,13 @@ def arrange_complete_data(train):
                 else:
                     print('ERROR IN TESTING - DISPOSITION(S) NOT FOUND FOR ACCOUNT ' + str(acc_id))
                     return
+
+            last_trans = du.get_acc_last_transaction(transactions, trans_reader, acc_id, du.parse_date(loan[2]))
                     
             # Transactions - Add avg monthly balance and avg transaction value for account
             # Transactions - Current balance based on last transaction before loan
-            data_row = [loan[0], loan[3], loan[5]]
+            data_row = [loan[0], loan[3], loan[5], len(acc_dispositions), last_trans[6]]
+
             data_row.extend(dist_data)
 
             if train:

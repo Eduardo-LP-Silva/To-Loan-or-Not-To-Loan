@@ -11,20 +11,18 @@ attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'm
     'disposition_disponent': 0}
 
 # Analyses csv's data and produces respective statistics
-def analyse_data():
+def analyse_data(clients=False):
     calc_missing_values()
     analyse_loans()
     analyse_accounts(False)
     analyse_cards()
     analyse_dispositions()
     analyse_districts()
-    #analyse_clients()
     analyse_transactions()
+    
+    if clients:
+        analyse_clients()
 
-    '''
-    for key in attr_data.keys():
-        print(key, str(attr_data[key]), sep=': ')
-    '''
 
     return attr_data
 
@@ -62,7 +60,7 @@ def analyse_transactions():
 
                 trans_attrs['amount'].append(float(trans[5]))
                 trans_attrs['balance'].append(float(trans[6]))
-
+                
         plot_pie(trans_types.values(), trans_types.keys(), 'Transaction Types')
         plot_pie(trans_operations.values(), trans_operations.keys(), 'Transaction Operations')
         plot_pie(trans_ks.values(), trans_ks.keys(), 'Transaction K Symbols')
@@ -266,20 +264,24 @@ def parse_date(date):
     month = date[2:4]
     day = date[4:]
 
-    return (year, month, day)
+    return (int(year), int(month), int(day))
 
-# Returns the last transaction before a given date
-def get_last_transaction(transactions, date):
+# Returns the last transaction of an account before a given date
+def get_acc_last_transaction(trans_file, trans_reader, acc_id, date):
     d1 = datetime.datetime(*date)
     prior_trans = []
 
-    for trans in transactions:
-        d2 = datetime.datetime(*parse_date(trans[2]))
+    trans_file.seek(0)
+    next(trans_reader)
 
-        if d2 < d1:
-            prior_trans.append(trans)
+    for trans in trans_reader:
+        if int(trans[1]) == acc_id:
+            d2 = datetime.datetime(*parse_date(trans[2]))
 
-    return max(prior_trans)
+            if d2 < d1:
+                prior_trans.append(trans)
+
+    return max(prior_trans) if len(prior_trans) > 0 else []
         
 
 # Returns the transactions associated with an account
@@ -424,6 +426,7 @@ def plot_confusion_matrix(cm, classes, title):
     plt.xlabel('Predicted Values')
     #plt.show()
     plt.savefig('./figures/' + title + '_confusion_matrix.png')
+    plt.close()
 
 # Draws a box chart based on a set of numerical attributes
 def plot_box(attrs, title):

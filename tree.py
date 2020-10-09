@@ -113,6 +113,7 @@ def visualize_tree(clf):
     tree.plot_tree(clf.estimators_[0], feature_names=dp.col_names.copy()[1 : len(dp.col_names) - 1], class_names=['0', '1'], 
         filled=True)
     fig.savefig('./figures/decision_tree.png')
+    plt.close()
 
 # Runs the model on the competition data
 def run_model(clf):
@@ -131,8 +132,8 @@ def run_model(clf):
 
 def main():
     clf = build_model()
-    visualize_tree(clf)
-    run_model(clf)
+    #visualize_tree(clf)
+    #run_model(clf)
 
 if __name__ == '__main__':
     main()
