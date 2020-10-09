@@ -2,6 +2,7 @@ import csv
 import operator
 import datetime
 import itertools
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,7 +24,6 @@ def analyse_data(clients=False):
     
     if clients:
         analyse_clients()
-
 
     return attr_data
 
@@ -204,26 +204,35 @@ def analyse_accounts(detailed):
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
-    with open('./files/loan_train.csv') as loans:
-        attrs = {'amount': [], 'duration': [], 'payments': []}
-        loans_reader = csv.reader(loans, delimiter=';')
-        next(loans_reader)
+    attrs = {'amount': [], 'duration': [], 'payments': []}
+    status_disp = pd.DataFrame([[0, 0], [0, 0]], columns=['1', '2'], index=['Unsuccessful', 'Successful'])
+    loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
+    dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
 
-        for row in loans_reader:
-            if len(row) == 7:
-                status = int(row[6])
-                attrs['amount'].append(int(row[3]))
-                attrs['duration'].append(int(row[4]))
-                attrs['payments'].append(int(row[5]))
+    for i, loan in loans.iterrows():
+        if len(loan) == 7:
+            status = loan['status']
+            row = -1
 
-                if status == 1:
-                    attr_data['loan_status_appr'] += 1
-                else:
-                    attr_data['loan_status_rej'] += 1
+            for attr_key in attrs.keys():
+                attrs[attr_key].append(loan[attr_key])
 
-        plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
+            disp_no = str(len(dispositions[dispositions['account_id'] == loan['account_id']]))
 
-        plot_box(attrs, 'Loans')
+            if status == 1:
+                attr_data['loan_status_appr'] += 1
+                row = 'Successful'
+            else:
+                attr_data['loan_status_rej'] += 1
+                row = 'Unsuccessful'
+
+            status_disp.at[row, disp_no] += 1
+
+    axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
+    fig = axis.get_figure()
+    fig.savefig('./figures/Disposition No. & Status.png')
+    plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
+    plot_box(attrs, 'Loans')
 
 # Calculates (necessary) missing and / or not loan linked values
 def calc_missing_values():
@@ -258,6 +267,9 @@ def calc_missing_values():
         for key in missing_vals.keys():
             if missing_vals[key]:
                 attr_data[key] += 1
+
+def get_avg_balance(transactions):
+    return transactions['balance'].mean()
 
 # Parses a YYMMDD date to tuple format
 def parse_date(date):

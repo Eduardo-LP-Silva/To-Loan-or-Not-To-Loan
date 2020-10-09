@@ -8,7 +8,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments', 'disposition_no', 'balance',
+col_names = ['loan_id', 'amount', 'payments', 'disposition_no', 'last_balance', 'avg_income',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96',
     'status']
 
@@ -79,10 +79,11 @@ def arrange_complete_data(train):
 
             acc_trans = du.get_acc_transactions(transactions, acc_id)
             last_trans = du.get_acc_last_transaction(acc_trans, du.parse_date(loan[2]))
+            balance_avg = du.get_avg_balance(acc_trans)
                     
-            # Transactions - Add avg monthly balance and avg transaction value for account
-            # Transactions - Current balance based on last transaction before loan
-            data_row = [loan[0], loan[3], loan[5], len(acc_dispositions), last_trans['balance']]
+            # Transactions - Add avg balance, avg income, avg spending (correlated ?)
+            data_row = [loan[0], loan[3], loan[5], len(acc_dispositions), last_trans['balance'],
+                acc_trans[acc_trans['type'] == 'credit']['amount'].mean()]
 
             data_row.extend(dist_data)
 
