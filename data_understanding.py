@@ -231,6 +231,8 @@ def analyse_loans():
     axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
     fig = axis.get_figure()
     fig.savefig('./figures/Disposition No. & Status.png')
+    plt.close()
+    
     plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
     plot_box(attrs, 'Loans')
 
