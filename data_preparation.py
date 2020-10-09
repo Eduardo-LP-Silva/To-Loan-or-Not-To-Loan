@@ -27,14 +27,14 @@ def arrange_complete_data(train):
         card_path = './files/card_test.csv'
         transaction_path = './files/trans_test.csv'
     
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions, open(transaction_path) as transactions: 
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions: 
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
         disp_reader = csv.reader(dispositions, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
-        trans_reader = csv.reader(transactions, delimiter=';')
         complete_data_writer = csv.writer(complete_data_file, delimiter=';')
+        transactions = pd.read_csv(transaction_path, sep=';', header=0, index_col=False, low_memory=False)
         next(loan_reader)
 
         header = col_names.copy()
@@ -77,11 +77,12 @@ def arrange_complete_data(train):
                     print('ERROR IN TESTING - DISPOSITION(S) NOT FOUND FOR ACCOUNT ' + str(acc_id))
                     return
 
-            last_trans = du.get_acc_last_transaction(transactions, trans_reader, acc_id, du.parse_date(loan[2]))
+            acc_trans = du.get_acc_transactions(transactions, acc_id)
+            last_trans = du.get_acc_last_transaction(acc_trans, du.parse_date(loan[2]))
                     
             # Transactions - Add avg monthly balance and avg transaction value for account
             # Transactions - Current balance based on last transaction before loan
-            data_row = [loan[0], loan[3], loan[5], len(acc_dispositions), last_trans[6]]
+            data_row = [loan[0], loan[3], loan[5], len(acc_dispositions), last_trans['balance']]
 
             data_row.extend(dist_data)
 

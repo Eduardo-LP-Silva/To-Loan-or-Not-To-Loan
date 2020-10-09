@@ -1,4 +1,5 @@
 import csv
+import operator
 import datetime
 import itertools
 import numpy as np
@@ -267,34 +268,22 @@ def parse_date(date):
     return (int(year), int(month), int(day))
 
 # Returns the last transaction of an account before a given date
-def get_acc_last_transaction(trans_file, trans_reader, acc_id, date):
+def get_acc_last_transaction(transactions, date):
     d1 = datetime.datetime(*date)
     prior_trans = []
 
-    trans_file.seek(0)
-    next(trans_reader)
+    for index, trans in transactions.iterrows():
+        d2 = datetime.datetime(*parse_date(str(trans['date'])))
 
-    for trans in trans_reader:
-        if int(trans[1]) == acc_id:
-            d2 = datetime.datetime(*parse_date(trans[2]))
+        if d2 < d1:
+            prior_trans.append(trans)
 
-            if d2 < d1:
-                prior_trans.append(trans)
-
-    return max(prior_trans) if len(prior_trans) > 0 else []
+    return max(prior_trans, key=operator.itemgetter('date'), default=[])
         
 
 # Returns the transactions associated with an account
-def get_account_transactions(trans_file, trans_reader, acc_id):
-    trans_file.seek(0)
-    next(trans_reader)
-    acc_trans = []
-
-    for trans in trans_reader:
-        if int(trans[1]) == acc_id:
-            acc_trans.append(trans)
-
-    return acc_trans    
+def get_acc_transactions(transactions_df, acc_id):
+    return transactions_df.loc[transactions_df['account_id'] == acc_id]    
 
 # Returns the accounts associated with a given client
 def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader):

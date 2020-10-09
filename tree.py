@@ -47,7 +47,7 @@ def build_model():
     print('\nTraining negative cases ratio: %.2f' % negative_percent_train + '%')
     print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
 
-    x_train_balanced, y_train_balanced = balance_train_dataset(x_train, y_train, 1.7)
+    x_train_balanced, y_train_balanced = balance_train_dataset(x_train, y_train, 1)
 
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
