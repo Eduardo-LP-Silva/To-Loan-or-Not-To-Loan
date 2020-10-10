@@ -2,6 +2,7 @@ import csv
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
 from sklearn.dummy import DummyClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
@@ -52,7 +53,8 @@ def build_model():
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = RandomForestClassifier(max_features=None, min_samples_split=2, min_samples_leaf=5, max_depth=None, random_state=42)
+    clf = RandomForestClassifier(max_features=None, min_samples_split=2, min_samples_leaf=5, 
+        max_depth=None, n_estimators=500, random_state=42)
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
 
@@ -66,10 +68,45 @@ def build_model():
 
     dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
 
-    print('Accuracy: %.1f' % (metrics.accuracy_score(y_test, y_pred) * 100) + '%')
-    print('AUC Score: %.2f' % roc_auc_score(y_test, prob_y))
+    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
+
+    #hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
     return clf
+
+def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
+    param_grid = {
+        'max_features': ['sqrt', None],
+        'min_samples_leaf': [2, 5, 10],
+        'min_samples_split': [2, 5, 10],
+        'n_estimators': [300, 500, 900],
+        'criterion': ['gini', 'entropy']
+    }
+
+    clf = RandomForestClassifier(max_features=None, max_depth=None, random_state=42)
+
+    grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, n_jobs=-1, verbose=1)
+    grid_search.fit(x_train, y_train)
+    
+    print('\n--- Best Params ---')
+    print(grid_search.best_params_)
+
+    y_pred = grid_search.predict(x_test)
+
+    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('AUC Score: %.2f' % calc_auc(grid_search.best_estimator_, x_test, y_test))
+
+# Returns a model's AUC
+def calc_auc(clf, x_test, y_test):
+    prob_y = clf.predict_proba(x_test)
+    prob_y = [p[1] for p in prob_y]
+
+    return roc_auc_score(y_test, prob_y)
+
+# Returns a model's accuracy
+def calc_accuracy(y_test, y_pred):
+    return metrics.accuracy_score(y_test, y_pred)
 
 # Builds, trains and evaluates a dummy classifier
 def dummy_classifier(x_train, y_train, x_test, y_test):
@@ -132,8 +169,8 @@ def run_model(clf):
 
 def main():
     clf = build_model()
-    #visualize_tree(clf)
-    #run_model(clf)
+    visualize_tree(clf)
+    run_model(clf)
 
 if __name__ == '__main__':
     main()
