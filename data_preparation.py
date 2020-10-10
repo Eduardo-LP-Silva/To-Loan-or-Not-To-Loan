@@ -1,6 +1,7 @@
 
 import csv
 import pandas as pd
+import numpy as np
 from pandas import Series, DataFrame
 import sklearn
 from sklearn import preprocessing
@@ -77,10 +78,10 @@ def arrange_complete_data(train):
                     return
 
             acc_trans = du.get_acc_transactions(transactions, acc_id)
-            last_trans = du.get_acc_last_transaction(acc_trans, du.parse_date(loan[2]))
+            last_trans = du.get_acc_last_transactions(acc_trans, du.parse_date(loan[2]))
                     
-            data_row = [loan[0], loan[3], loan[5], last_trans['balance'],
-                acc_trans['balance'].mean()]
+            data_row = [loan[0], loan[3], loan[5], last_trans[0]['balance'],
+                np.mean([trans['balance'] for trans in last_trans])]
 
             data_row.extend(dist_data)
 

@@ -270,6 +270,7 @@ def calc_missing_values():
             if missing_vals[key]:
                 attr_data[key] += 1
 
+# Returns the average balance of an account given its transactions
 def get_avg_balance(transactions):
     return transactions['balance'].mean()
 
@@ -281,8 +282,8 @@ def parse_date(date):
 
     return (int(year), int(month), int(day))
 
-# Returns the last transaction of an account before a given date
-def get_acc_last_transaction(transactions, date):
+# Returns the last transactions of an account before a given date, from most recent to oldest
+def get_acc_last_transactions(transactions, date):
     d1 = datetime.datetime(*date)
     prior_trans = []
 
@@ -292,9 +293,10 @@ def get_acc_last_transaction(transactions, date):
         if d2 < d1:
             prior_trans.append(trans)
 
-    return max(prior_trans, key=operator.itemgetter('date'), default=[])
-        
+    prior_trans.sort(key=operator.attrgetter('date'), reverse=True)
 
+    return prior_trans 
+        
 # Returns the transactions associated with an account
 def get_acc_transactions(transactions_df, acc_id):
     return transactions_df.loc[transactions_df['account_id'] == acc_id]    
