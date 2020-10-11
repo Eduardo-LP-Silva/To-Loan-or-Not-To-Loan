@@ -21,7 +21,7 @@ def analyse_data(clients=False):
     analyse_dispositions()
     analyse_districts()
     analyse_transactions()
-    
+
     if clients:
         analyse_clients()
 
@@ -39,7 +39,7 @@ def analyse_transactions():
         next(trans_reader)
 
         for trans in trans_reader:
-            if len(trans) == 10: 
+            if len(trans) == 10:
                 if trans[3] in trans_types:
                     trans_types[trans[3]] += 1
                 else:
@@ -61,12 +61,12 @@ def analyse_transactions():
 
                 trans_attrs['amount'].append(float(trans[5]))
                 trans_attrs['balance'].append(float(trans[6]))
-                
+
         plot_pie(trans_types.values(), trans_types.keys(), 'Transaction Types')
         plot_pie(trans_operations.values(), trans_operations.keys(), 'Transaction Operations')
         plot_pie(trans_ks.values(), trans_ks.keys(), 'Transaction K Symbols')
         plot_box(trans_attrs, 'Transaction')
-        
+
 # Analyses the clients csv and produces the number of accounts per client plot
 def analyse_clients():
     with open('./files/client.csv') as clients, open('./files/disp.csv') as dispositions, open('./files/account.csv') as accounts:
@@ -232,7 +232,7 @@ def analyse_loans():
     fig = axis.get_figure()
     fig.savefig('./figures/Disposition No. & Status.png')
     plt.close()
-    
+
     plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
     plot_box(attrs, 'Loans')
 
@@ -295,11 +295,11 @@ def get_acc_last_transactions(transactions, date):
 
     prior_trans.sort(key=operator.attrgetter('date'), reverse=True)
 
-    return prior_trans 
-        
+    return prior_trans
+
 # Returns the transactions associated with an account
 def get_acc_transactions(transactions_df, acc_id):
-    return transactions_df.loc[transactions_df['account_id'] == acc_id]    
+    return transactions_df.loc[transactions_df['account_id'] == acc_id]
 
 # Returns the accounts associated with a given client
 def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader):
