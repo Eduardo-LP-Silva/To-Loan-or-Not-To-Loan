@@ -169,8 +169,8 @@ def run_model(clf):
 
 def main():
     clf = build_model()
-    #visualize_tree(clf)
-    #run_model(clf)
+    visualize_tree(clf)
+    run_model(clf)
 
 if __name__ == '__main__':
     main()
