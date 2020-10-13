@@ -1,7 +1,5 @@
 import csv
 import pandas as pd
-import sklearn
-import scipy
 from sklearn import preprocessing
 from sklearn.preprocessing import scale
 from sklearn.neighbors import KNeighborsClassifier
@@ -9,10 +7,10 @@ from sklearn import neighbors
 from sklearn.model_selection import train_test_split
 from sklearn import model_selection
 from sklearn import metrics
+from sklearn.metrics import classification_report
+from sklearn.model_selection import GridSearchCV
 from sklearn.utils import resample
-from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_auc_score
-from sklearn.dummy import DummyClassifier
 import data_preparation as dp
 
 # Loads data from complete_data.csv and returns it in the form of a pandas data frame, depending on the mode (train or test)
@@ -54,24 +52,51 @@ def build_model():
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = neighbors.KNeighborsClassifier()
+    clf = neighbors.KNeighborsClassifier(n_neighbors=3)
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
-
-    cm = confusion_matrix(y_test, y_pred)
-    # du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
 
     prob_y = clf.predict_proba(x_test)
     prob_y = [p[1] for p in prob_y]
 
-    # get_feature_importance(clf)
-
-    dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
-
+    # Print classification report
+    print(classification_report(y_test, y_pred))
     print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
     print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
 
-    #hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+    # best_clf = hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+    #
+    # #Fit the model
+    # best_model = best_clf.fit(x_train_balanced, y_train_balanced)
+    #
+    # print('Best leaf_size:', best_model.best_estimator_.get_params()['leaf_size'])
+    # print('Best p:', best_model.best_estimator_.get_params()['p'])
+    # print('Best n_neighbors:', best_model.best_estimator_.get_params()['n_neighbors'])
+    # new_y_pred = best_clf.predict(x_test)
+    #
+    # prob_y = best_clf.predict_proba(x_test)
+    # prob_y = [p[1] for p in prob_y]
+    #
+    # # Print classification report
+    # print(classification_report(y_test, new_y_pred))
+    # print('Accuracy: %.1f' % (calc_accuracy(y_test, new_y_pred) * 100) + '%')
+    # print('AUC Score: %.2f' % calc_auc(best_clf, x_test, y_test))
+
+    return clf
+
+def hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test):
+    # List Hyperparameters that we want to tune.
+    leaf_size = list(range(1,50))
+    n_neighbors = list(range(1,30))
+    p=[1,2]
+
+    # Convert to dictionary
+    hyperparameters = dict(leaf_size=leaf_size, n_neighbors=n_neighbors, p=p)
+
+    # Create new KNN object
+    knn_2 = KNeighborsClassifier()
+    # Use GridSearch
+    clf = GridSearchCV(knn_2, hyperparameters, cv=10)
 
     return clf
 
@@ -86,11 +111,6 @@ def calc_auc(clf, x_test, y_test):
 def calc_accuracy(y_test, y_pred):
     return metrics.accuracy_score(y_test, y_pred)
 
-# Builds, trains and evaluates a dummy classifier
-def dummy_classifier(x_train, y_train, x_test, y_test):
-    dummy = DummyClassifier(strategy='most_frequent')
-    dummy.fit(x_train, y_train)
-    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test) * 100) + '%')
 
 # Balances the training set given a ratio
 def balance_train_dataset(x_train, y_train, ratio):
