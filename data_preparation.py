@@ -9,7 +9,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_spending', 'negative_balance',
+col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_spending', 'insufficient_balance',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96', 
     'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
     'status']
@@ -84,7 +84,7 @@ def arrange_complete_data(train):
 
             data_row = [loan[0], loan[3], loan[5], last_trans[0]['balance'],
                 np.mean([trans['balance'] for trans in last_trans]), np.mean(last_wd) if len(last_wd) > 0 else 0,
-                len(acc_trans[acc_trans['balance'] <= 0])]
+                len(acc_trans[acc_trans['balance'] <= int(loan[5])])]
 
             data_row.extend(dist_data)
 
