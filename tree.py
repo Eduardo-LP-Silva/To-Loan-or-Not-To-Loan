@@ -53,8 +53,8 @@ def build_model():
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = RandomForestClassifier(max_features=None, min_samples_split=2, min_samples_leaf=5, 
-        max_depth=None, n_estimators=500, random_state=42)
+    clf = RandomForestClassifier(max_features=None, criterion='entropy', min_samples_split=2, min_samples_leaf=5, 
+        max_depth=None, n_estimators=300, random_state=42)
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
 

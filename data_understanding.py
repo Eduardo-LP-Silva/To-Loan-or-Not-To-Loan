@@ -6,8 +6,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.rcParams['font.size'] = 8.0
+
 # Data to be passed to preparation
-attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0}
+attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'trans_op_mode': '', 'trans_k_mode': ''}
 
 # Analyses csv's data and produces respective statistics
 def analyse_data(clients=False):
@@ -42,14 +44,14 @@ def analyse_transactions():
                 else:
                     trans_types[trans[3]] = 0
 
-                trans_op = trans[4] if trans[4] != '' else 'Missing'
+                trans_op = 'Missing' if not trans[4] or trans[4].isspace() else trans[4]
 
                 if trans_op in trans_operations:
                     trans_operations[trans_op] += 1
                 else:
                     trans_operations[trans_op] = 0
 
-                trans_k = trans[7] if trans[7] != '' else 'Missing'
+                trans_k = 'Missing' if not trans[7] or trans[7].isspace() else trans[7]
 
                 if trans_k in trans_ks:
                     trans_ks[trans_k] += 1
@@ -58,6 +60,9 @@ def analyse_transactions():
 
                 trans_attrs['amount'].append(float(trans[5]))
                 trans_attrs['balance'].append(float(trans[6]))
+
+        attr_data['trans_op_mode'] = max(trans_operations.items(), key=operator.itemgetter(1))[0]
+        attr_data['trans_k_mode'] = max(trans_ks.items(), key=operator.itemgetter(1))[0]
 
         plot_pie(trans_types.values(), trans_types.keys(), 'Transaction Types')
         plot_pie(trans_operations.values(), trans_operations.keys(), 'Transaction Operations')
@@ -289,9 +294,27 @@ def calc_missing_values():
         for key in missing_vals_count.keys():
             print(key + ': ' + str(missing_vals_count[key]))
 
-# Returns the average balance of an account given its transactions
-def get_avg_balance(transactions):
-    return transactions['balance'].mean()
+'''
+def get_income(acc_transactions):
+    acc_transactions.sort(key=operator.attrgetter('date'))
+    monthly_incomes = [0]
+    i = 0
+    previous_date = parse_date(str(acc_transactions[0]['date'])) if len(acc_transactions) > 0 else None
+
+    for trans in acc_transactions:
+        if trans['type'] == 'credit':
+            date = parse_date(str(trans['date']))
+
+            if date[0] != previous_date[0]:
+                monthly_incomes.append(trans['amount'])
+                i += 1
+            else:
+                monthly_incomes[i] += trans['amount']
+
+            previous_date = date
+
+    return sum(monthly_incomes) / len(monthly_incomes)
+'''
 
 # Parses a YYMMDD date to tuple format
 def parse_date(date):
@@ -474,7 +497,8 @@ def plot_box(attrs, title):
 # Draws a pie chart based on a set of sizes / numerical data and respective labels
 def plot_pie(sizes, labels, title):
     _, loan_chart = plt.subplots()
-    loan_chart.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+    loan_chart.pie(sizes, labels=labels, autopct='%1.1f%%')
+    plt.tight_layout(pad=6.0)
     loan_chart.axis('equal')
     #plt.show()
     plt.title(title)

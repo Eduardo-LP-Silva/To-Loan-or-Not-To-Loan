@@ -9,7 +9,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_spending', 'insufficient_balance',
+col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_withdrawals', 'negative_balance',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96', 
     'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
     'status']
@@ -80,12 +80,12 @@ def arrange_complete_data(train):
 
             acc_trans = du.get_acc_transactions(transactions, acc_id)
             last_trans = du.get_acc_last_transactions(acc_trans, du.parse_date(loan[2]))
-            last_wd = [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal']
+            last_wds = [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal']
 
             data_row = [loan[0], loan[3], loan[5], last_trans[0]['balance'],
-                np.mean([trans['balance'] for trans in last_trans]), np.mean(last_wd) if len(last_wd) > 0 else 0,
-                len(acc_trans[acc_trans['balance'] <= int(loan[5])])]
-
+                np.mean([trans['balance'] for trans in last_trans]), np.mean(last_wds) if len(last_wds) > 0 else 0,
+                len([trans for trans in last_trans if trans['balance'] <= 0])]
+            
             data_row.extend(dist_data)
 
             if train:
@@ -162,6 +162,15 @@ def arrange_train_test_data(attr_data):
 def clean_data(attr_data):
     clean_dispositions()
     clean_districts(attr_data['dist_avg_95_ur'], attr_data['dist_avg_95_cr'])
+
+'''
+# Cleans transactions files by replacing missing K symbols and operations with the most common ones, respectively
+def clean_transactions(op_mode, k_mode):
+    with open('./files/trans_train.csv') as transactions_train, open('./files/trans_train_clean.csv', 'w', newline='') as transactions_train_clean, open('./files/trans_test.csv') as transactions_train, open('./files/trans_train_clean.csv', 'w', newline='') as transactions_train_clean:
+        dist_reader = csv.reader(districts, delimiter=';')
+        dist_writer = csv.writer(districts_clean, delimiter=';')
+        dist_writer.writerow(next(dist_reader))
+'''
 
 # Replaces missing values in the 95 unemployment and crime rates columns with their average
 def clean_districts(avg_95_ur, avg_95_cr):
