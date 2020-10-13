@@ -9,7 +9,7 @@ from sklearn.preprocessing import scale
 import data_understanding as du
 
 # column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance',
+col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_spending',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96',
     'status']
 
@@ -79,9 +79,10 @@ def arrange_complete_data(train):
 
             acc_trans = du.get_acc_transactions(transactions, acc_id)
             last_trans = du.get_acc_last_transactions(acc_trans, du.parse_date(loan[2]))
-                    
+            last_wd = [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal']
+
             data_row = [loan[0], loan[3], loan[5], last_trans[0]['balance'],
-                np.mean([trans['balance'] for trans in last_trans])]
+                np.mean([trans['balance'] for trans in last_trans]), np.mean(last_wd) if len(last_wd) > 0 else 0]
 
             data_row.extend(dist_data)
 
@@ -157,10 +158,10 @@ def arrange_train_test_data(attr_data):
                         
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):
-    clean_dispositions(attr_data)
+    clean_dispositions()
 
 # Copies dispositions complete records and changes type to binary form
-def clean_dispositions(attr_data):
+def clean_dispositions():
     with open('./files/disp.csv') as dispositions, open('./files/disp_clean.csv', 'w', newline='') as dispositions_clean:
         disp_reader = csv.reader(dispositions, delimiter=';')
         disp_writer = csv.writer(dispositions_clean, delimiter=';')
@@ -178,7 +179,7 @@ def clean_dispositions(attr_data):
                 disp_writer.writerow(disp)
 
 # Copies loans training complete records and changes the status attribute to binary form
-def clean_loans(attr_data):
+def clean_loans():
     with open('./files/loan_train.csv') as loans, open('./files/loan_train_clean.csv', 'w', newline='') as loans_new:
         loan_reader = csv.reader(loans, delimiter=';')
         loan_writer = csv.writer(loans_new, delimiter=';')

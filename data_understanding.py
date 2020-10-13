@@ -7,10 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Data to be passed to preparation
-attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'missing_loans': 0, 'missing_districts': 0,
-    'missing_dispositions': 0, 'missing_accounts': 0, 'frequency_monthly': 0, 'frequency_transactional': 0,
-    'frequency_weekly': 0, 'cards_classic': 0, 'cards_junior': 0, 'cards_gold': 0, 'disposition_owner': 0,
-    'disposition_disponent': 0}
+attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0}
 
 # Analyses csv's data and produces respective statistics
 def analyse_data(clients=False):
@@ -117,33 +114,34 @@ def analyse_districts():
 def analyse_dispositions():
     with open('./files/disp.csv') as dispositions:
         disp_reader = csv.reader(dispositions, delimiter=';')
+        disp_type = {'owner': 0, 'disponent': 0}
         next(disp_reader)
 
         for disp in disp_reader:
             if len(disp) == 4:
-                attr_data['disposition_' + disp[3].lower()] += 1
+                disp_type[disp[3].lower()] += 1
 
-        plot_pie([attr_data['disposition_owner'], attr_data['disposition_disponent']], ['Owner', 'Disponent'],
-            'Disposition')
+        plot_pie(disp_type.values(), disp_type.keys(), 'Disposition')
 
 # Analyses training cards csv and produces card type pie chart
 def analyse_cards():
     with open('./files/card_train.csv') as cards:
         card_reader = csv.reader(cards, delimiter=';')
+        card_types = {'classic': 0, 'junior': 0, 'gold': 0}
         next(card_reader)
 
         for card in card_reader:
             if len(card) == 4:
-                attr_data['cards_' + card[2]] += 1
+                card_types[card[2]] += 1
 
-        plot_pie([attr_data['cards_classic'], attr_data['cards_junior'], attr_data['cards_gold']], ['Classic', 'Junior',
-            'Gold'], 'Card Type')
+        plot_pie(card_types.values(), card_types.keys(), 'Card Type')
 
 # Analyses accounts csv and produces various statistics regarding them
 def analyse_accounts(detailed):
     with open('./files/account.csv') as accounts, open('./files/disp.csv') as dispositions_file, open('./files/card_train.csv') as cards, open('./files/loan_train.csv') as loans:
         acc_reader = csv.reader(accounts, delimiter=';')
         disp_reader = csv.reader(dispositions_file, delimiter=';')
+        freqs = {'Monthly': 0, 'Weekly': 0, 'After Transaction': 0}
 
         if detailed:
             loans_reader = csv.reader(loans, delimiter=';')
@@ -160,11 +158,11 @@ def analyse_accounts(detailed):
                 acc_id = int(account[0])
 
                 if account[2] == 'monthly issuance':
-                    attr_data['frequency_monthly'] += 1
+                    freqs['Monthly'] += 1
                 elif account[2] == 'weekly issuance':
-                    attr_data['frequency_weekly'] += 1
+                    freqs['Weekly'] += 1
                 else:
-                    attr_data['frequency_transactional'] += 1
+                    freqs['After Transaction'] += 1
 
                 if detailed:
                     dispositions = get_dispositions(dispositions_file, disp_reader, acc_id)
@@ -190,8 +188,7 @@ def analyse_accounts(detailed):
                     else:
                         acc_loan_no[acc_loans] = 1
 
-        plot_pie([attr_data['frequency_monthly'], attr_data['frequency_transactional'], attr_data['frequency_weekly']],
-            ['Monthly', 'After Transaction', 'Weekly'], 'Account Issuance Frequency')
+        plot_pie(freqs.values(), freqs.keys(), 'Account Issuance Frequency')
 
         if detailed:
             plot_pie(disp_nos.values(), disp_nos.keys(), 'Account Dispositions No')
@@ -246,6 +243,9 @@ def calc_missing_values():
         dist_reader = csv.reader(districts, delimiter=';')
         next(loans_reader)
 
+        missing_vals_count = {'missing_districts': 0, 'missing_loans': 0, 'missing_dispositions': 0, 
+            'missing_accounts': 0}
+
         for row in loans_reader:
             if len(row) == 7:
                 acc_id = int(row[1])
@@ -264,11 +264,15 @@ def calc_missing_values():
                     if len(dispositions_list) > 0:
                         missing_vals['missing_dispositions'] = False
             else:
-                attr_data['missing_loans'] += 1
+                missing_vals_count['missing_loans'] += 1
 
-        for key in missing_vals.keys():
-            if missing_vals[key]:
-                attr_data[key] += 1
+            for key in missing_vals.keys():
+                if missing_vals[key]:
+                    missing_vals_count[key] += 1
+            
+        print('\n--- Missing Required ID Matches ---')
+        for key in missing_vals_count.keys():
+            print(key + ': ' + str(missing_vals_count[key]))
 
 # Returns the average balance of an account given its transactions
 def get_avg_balance(transactions):
