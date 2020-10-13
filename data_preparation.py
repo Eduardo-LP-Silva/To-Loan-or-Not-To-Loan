@@ -10,7 +10,8 @@ import data_understanding as du
 
 # column headers for final training / testing data
 col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_spending',
-    'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 96', 'dist. no. of commited crimes 96',
+    'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96', 
+    'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
     'status']
 
 # Generates new development csv with all relevant data from most csv's
@@ -28,7 +29,7 @@ def arrange_complete_data(train):
         card_path = './files/card_test.csv'
         transaction_path = './files/trans_test.csv'
     
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district.csv') as districts, open('./files/disp_clean.csv') as dispositions: 
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts, open('./files/disp_clean.csv') as dispositions: 
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
@@ -67,7 +68,7 @@ def arrange_complete_data(train):
                     return
 
             # choose only relevant district data
-            dist_data = [district[3], district[10], district[12], district[15]]
+            dist_data = [district[3], district[10], district[11], district[12], district[14], district[15]]
             acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
             
             if len(acc_dispositions) == 0:
@@ -159,6 +160,29 @@ def arrange_train_test_data(attr_data):
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):
     clean_dispositions()
+    clean_districts(attr_data['dist_avg_95_ur'], attr_data['dist_avg_95_cr'])
+
+# Replaces missing values in the 95 unemployment and crime rates columns with their average
+def clean_districts(avg_95_ur, avg_95_cr):
+    with open('./files/district.csv') as districts, open('./files/district_clean.csv', 'w', newline='') as districts_clean:
+        dist_reader = csv.reader(districts, delimiter=';')
+        dist_writer = csv.writer(districts_clean, delimiter=';')
+        dist_writer.writerow(next(dist_reader))
+
+        for dist in dist_reader:
+            if len(dist) == 16:
+                try:
+                    float(dist[11])
+                except ValueError:
+                    dist[11] = avg_95_ur
+
+                try:
+                    float(dist[14])
+                except ValueError:
+                    dist[14] = avg_95_cr
+
+                dist_writer.writerow(dist)
+
 
 # Copies dispositions complete records and changes type to binary form
 def clean_dispositions():

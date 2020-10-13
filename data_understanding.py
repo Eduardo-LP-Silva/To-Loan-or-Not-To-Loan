@@ -90,7 +90,8 @@ def analyse_clients():
 def analyse_districts():
     with open('./files/district.csv') as districts:
         attrs = {'inh': [], 'mun_lt_499': [], 'mun_500_1999': [], 'mun_2000_9999': [], 'mun_gt_10000': [],
-            'cities': [], 'urban_inh_r': [], 'avg_salary': [], 'unemp_96': [], 'enterp_p_1000': [], 'crimes_96': []}
+            'cities': [], 'urban_inh_r': [], 'avg_salary': [], 'unemp_95': [], 'unemp_96': [], 'enterp_p_1000': [], 
+            'crimes_95': [], 'crimes_96': []}
         dist_reader = csv.reader(districts, delimiter=';')
         next(dist_reader)
 
@@ -104,10 +105,24 @@ def analyse_districts():
                 attrs['cities'].append(int(row[8]))
                 attrs['urban_inh_r'].append(float(row[9]))
                 attrs['avg_salary'].append(int(row[10]))
+
+                try:
+                    attrs['unemp_95'].append(float(row[11]))
+                except ValueError:
+                    pass
+
                 attrs['unemp_96'].append(float(row[12]))
                 attrs['enterp_p_1000'].append(int(row[13]))
+
+                try:
+                    attrs['crimes_95'].append(float(row[14]))
+                except ValueError:
+                    pass
+                
                 attrs['crimes_96'].append(int(row[15]))
 
+        attr_data['dist_avg_95_ur'] =  sum(attrs['unemp_95']) / len(attrs['unemp_95'])
+        attr_data['dist_avg_95_cr'] =  sum(attrs['crimes_95']) / len(attrs['crimes_95'])
         plot_box(attrs, 'Districts')
 
 # Analyses dispositions csv and produces disposition type pie chart
@@ -445,11 +460,11 @@ def plot_box(attrs, title):
         minThresh = r['whiskers'][0].get_xdata()[1]
         maxThresh = r['whiskers'][1].get_xdata()[1]
 
-        attr_data[attr] = (minThresh, maxThresh)
+        thresholds = (minThresh, maxThresh)
 
         print(attr, 'Max: ' + str(max(attr_array)), 'Min: ' + str(min(attr_array)),
-            'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(attr_data[attr][0]),
-            'Max.Thresh ' + str(attr_data[attr][1]), sep=' | ')
+            'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(thresholds[0]),
+            'Max.Thresh ' + str(thresholds[1]), sep=' | ')
 
         plt.title(title + ' - ' + attr)
         #plt.show()
