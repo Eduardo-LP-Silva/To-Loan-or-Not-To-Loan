@@ -1,18 +1,14 @@
-import csv
 import pandas as pd
-import sklearn
-import scipy
-from sklearn import preprocessing
-from sklearn.preprocessing import scale
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn import neighbors
+import csv
 from sklearn.model_selection import train_test_split
-from sklearn import model_selection
+from sklearn import svm
+from sklearn.svm import SVC
 from sklearn import metrics
 from sklearn.utils import resample
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
 from sklearn.metrics import roc_auc_score
 from sklearn.dummy import DummyClassifier
+from sklearn.model_selection import GridSearchCV
 import data_preparation as dp
 
 # Loads data from complete_data.csv and returns it in the form of a pandas data frame, depending on the mode (train or test)
@@ -30,7 +26,7 @@ def load_data(train):
         header.pop()
         return data[header]
 
-# Builds the k nearest neighbor model and calculates the accuracy and AUC score
+# Builds the Support Vector Machine model and calculates the accuracy and AUC score
 def build_model():
     dp.arrange_complete_data(True)
     x, y = load_data(True)
@@ -54,26 +50,57 @@ def build_model():
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = neighbors.KNeighborsClassifier()
-    clf.fit(x_train_balanced, y_train_balanced)
-    y_pred = clf.predict(x_test)
+    # Generating the model
+    cls = svm.SVC(probability=True)
 
-    cm = confusion_matrix(y_test, y_pred)
-    # du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
+    # Train the model
+    cls.fit(x_train_balanced, y_train_balanced)
 
-    prob_y = clf.predict_proba(x_test)
+    # Predict the response
+    y_pred = cls.predict(x_test)
+
+    prob_y = cls.predict_proba(x_test)
     prob_y = [p[1] for p in prob_y]
 
-    # get_feature_importance(clf)
+    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('AUC Score: %.2f' % calc_auc(cls, x_test, y_test))
 
-    dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
+    print(metrics.classification_report(y_test, y_pred))
+
+    # So far {'C': 0.1, 'gamma': 1, 'kernel': 'poly'} are the best params according to grid search
+    grid = hyper_parameter_grid_search()
+
+    # Train the model
+    grid.fit(x_train_balanced, y_train_balanced)
+
+    # Print best parameter after tuning
+    print(grid.best_params_)
+
+    # Print how our model looks after hyper-parameter tuning
+    print(grid.best_estimator_)
+
+    # Predict the response
+    grid_predictions = grid.predict(x_test)
+
+    prob_y = grid.predict_proba(x_test)
+    prob_y = [p[1] for p in prob_y]
 
     print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
-    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
+    print('AUC Score: %.2f' % calc_auc(grid, x_test, y_test))
 
-    #hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+    # Print classification report
+    print(classification_report(y_test, grid_predictions))
 
-    return clf
+    return grid
+
+def hyper_parameter_grid_search():
+    # Define parameter range
+    param_grid = {'C': [0.1, 1, 10, 100, 1000],
+                  'gamma': [1, 0.1, 0.01, 0.001, 0.0001],
+                  'kernel': ['rbf', 'poly', 'sigmoid']}
+
+    grid = GridSearchCV(SVC(probability = True), param_grid, refit = True, verbose = 3)
+    return grid
 
 # Returns a model's AUC
 def calc_auc(clf, x_test, y_test):
@@ -85,12 +112,6 @@ def calc_auc(clf, x_test, y_test):
 # Returns a model's accuracy
 def calc_accuracy(y_test, y_pred):
     return metrics.accuracy_score(y_test, y_pred)
-
-# Builds, trains and evaluates a dummy classifier
-def dummy_classifier(x_train, y_train, x_test, y_test):
-    dummy = DummyClassifier(strategy='most_frequent')
-    dummy.fit(x_train, y_train)
-    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test) * 100) + '%')
 
 # Balances the training set given a ratio
 def balance_train_dataset(x_train, y_train, ratio):
@@ -114,13 +135,6 @@ def balance_train_dataset(x_train, y_train, ratio):
         str(len(y_train_balanced[y_train_balanced.values == -1])))
 
     return x_train_balanced, y_train_balanced
-
-# Displays the relevance of each predictive attribute in respect to the final prediction
-def get_feature_importance(clf):
-    print('\n--- Feature Importance ---\n')
-
-    for i in range(len(clf.feature_importances_)):
-        print(dp.col_names[i + 1] + ': ' + '%.2f' % (clf.feature_importances_[i] * 100) + '%')
 
 # Runs the model on the competition data
 def run_model(clf):
