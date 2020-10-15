@@ -29,11 +29,12 @@ def arrange_complete_data(train):
         card_path = './files/card_test.csv'
         transaction_path = './files/trans_test.csv'
 
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts, open('./files/disp_clean.csv') as dispositions:
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts, open('./files/disp_clean.csv') as dispositions, open('./files/client_clean.csv') as clients:
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
         disp_reader = csv.reader(dispositions, delimiter=';')
+        clients_reader = csv.reader(clients, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
         complete_data_writer = csv.writer(complete_data_file, delimiter=';')
         transactions = pd.read_csv(transaction_path, sep=';', header=0, index_col=False, low_memory=False)
@@ -56,6 +57,15 @@ def arrange_complete_data(train):
                 else:
                     print('ERROR IN TESTING - ACCOUNT NOT FOUND FOR ID ' + str(acc_id))
                     return
+
+            # Owner data
+            owner_id = du.get_acc_owner(acc_id, dispositions, disp_reader)
+            print("id")
+            print(owner_id)
+            owner = du.get_client(clients, clients_reader, owner_id)
+            print("OWNER")
+            print(owner)
+
 
             dist_id = int(account[1])
             district = du.get_district(districts, dist_reader, dist_id)
@@ -213,7 +223,7 @@ def clean_dispositions():
 
                 disp_writer.writerow(disp)
 
-# Copies dispositions complete records and changes type to binary form
+# Copies client ids and districts as well as adding their age and gender
 def clean_clients():
     with open('./files/client.csv') as clients, open('./files/client_clean.csv', 'w', newline='') as clients_clean:
         client_reader = csv.reader(clients, delimiter=';')

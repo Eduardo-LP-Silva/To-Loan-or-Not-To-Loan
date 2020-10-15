@@ -367,7 +367,31 @@ def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader)
 
     return accs
 
-# TODO: CHANGE FOR AGE OF LOAN INSTEAD OF CURRENT AGE
+# Returns the client data given a client_id
+def get_client(clients_file, clients_reader, client_id):
+    clients_file.seek(0)
+    next(clients_file)
+
+    client_data = []
+
+    for client in clients_reader:
+        if len(client) == 4 and int(client[0]) == int(client_id):
+            client_data.append(client)
+
+    return client_data
+
+# Returns the client owner of a given account
+def get_acc_owner(account_id, disp_file, disp_reader):
+    owner = []
+
+    disp_file.seek(0)
+    next(disp_reader)
+
+    for disp in disp_reader:
+        if len(disp) == 4 and int(disp[2]) == account_id:
+            return disp[1]
+    return
+
 # Returns the age of a client
 def get_client_age(birthdate):
     day = int(birthdate[4:])
@@ -386,19 +410,6 @@ def get_client_gender(birthdate):
     if int(month) > 12:
         return 'F'
     return 'M'
-
-# Returns the client data given a client_id
-def get_client(clients_file, clients_reader, client_id):
-    clients_file.seek(0)
-    next(clients_file)
-
-    client_data = []
-
-    for client in clients_reader:
-        if len(client) == 5 and int(client[0]) == client_id:
-            client_data.append(client)
-
-    return client_data
 
 # Returns the age a certain client had when he asked for the loan, given the client's current age and the loan date
 def calculate_loan_age(client_age, loan_date):
