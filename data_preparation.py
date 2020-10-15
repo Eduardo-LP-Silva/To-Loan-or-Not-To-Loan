@@ -160,6 +160,7 @@ def arrange_train_test_data(attr_data):
 
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):
+    clean_clients()
     clean_dispositions()
     clean_districts(attr_data['dist_avg_95_ur'], attr_data['dist_avg_95_cr'])
 
@@ -211,6 +212,25 @@ def clean_dispositions():
                     disp[3] = 0
 
                 disp_writer.writerow(disp)
+
+# Copies dispositions complete records and changes type to binary form
+def clean_clients():
+    with open('./files/client.csv') as clients, open('./files/client_clean.csv', 'w', newline='') as clients_clean:
+        client_reader = csv.reader(clients, delimiter=';')
+        client_writer = csv.writer(clients_clean, delimiter=';')
+        header = ['client_id', 'age', 'district_id', 'gender']
+        client_writer.writerow(header)
+        next(client_reader)
+
+        for client in client_reader:
+            if len(client) == 3:
+                gender = du.get_client_gender(client[1])
+                age = du.get_client_age(client[1])
+
+                client[1] = age
+                client.append(gender)
+
+                client_writer.writerow(client)
 
 # Copies loans training complete records and changes the status attribute to binary form
 def clean_loans():

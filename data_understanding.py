@@ -387,6 +387,30 @@ def get_client_gender(birthdate):
         return 'F'
     return 'M'
 
+# Returns the client data given a client_id
+def get_client(clients_file, clients_reader, client_id):
+    clients_file.seek(0)
+    next(clients_file)
+
+    client_data = []
+
+    for client in clients_reader:
+        if len(client) == 5 and int(client[0]) == client_id:
+            client_data.append(client)
+
+    return client_data
+
+# Returns the age a certain client had when he asked for the loan, given the client's current age and the loan date
+def calculate_loan_age(client_age, loan_date):
+    loan_day = int(birthdate[4:])
+    loan_month = int(birthdate[2:4])
+    loan_year = int(birthdate[:2])
+
+    today = date.today()
+    loan_age = today.year - (1900 + loan_year) - ((today.month, today.day) < (loan_month, loan_day))
+
+    return client_age - loan_age
+
 # Returns the loans associated with a given account
 def get_account_loans(loans_file, loans_reader, acc_id):
     loans_file.seek(0)
