@@ -84,8 +84,9 @@ def analyse_clients():
         for client in clients_reader:
             if len(client) == 3:
                 client_accs = len(get_client_accounts(int(client[0]), dispositions, disp_reader, accounts, acc_reader))
-                client_age = get_client_age(client[1])
-                client_gender = get_client_gender(client[1])
+                # TODO
+                # client_age = get_client_age(client[1])
+                # client_gender = get_client_gender(client[1])
 
                 if client_accs in client_account_no:
                     client_account_no[client_accs] += 1
@@ -408,19 +409,19 @@ def get_client_age(birthdate):
 def get_client_gender(birthdate):
     month = birthdate[2:4]
     if int(month) > 12:
-        return 'F'
-    return 'M'
+        return 1 # female
+    return 0 # male
 
 # Returns the age a certain client had when he asked for the loan, given the client's current age and the loan date
 def calculate_loan_age(client_age, loan_date):
-    loan_day = int(birthdate[4:])
-    loan_month = int(birthdate[2:4])
-    loan_year = int(birthdate[:2])
+    loan_day = int(loan_date[4:])
+    loan_month = int(loan_date[2:4])
+    loan_year = int(loan_date[:2])
 
     today = date.today()
     loan_age = today.year - (1900 + loan_year) - ((today.month, today.day) < (loan_month, loan_day))
 
-    return client_age - loan_age
+    return int(client_age) - loan_age
 
 # Returns the loans associated with a given account
 def get_account_loans(loans_file, loans_reader, acc_id):

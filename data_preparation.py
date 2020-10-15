@@ -11,7 +11,7 @@ import data_understanding as du
 # column headers for final training / testing data
 col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_withdrawals', 'negative_balance',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96',
-    'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
+    'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96', 'loan age',
     'status']
 
 # Generates new development csv with all relevant data from most csv's
@@ -60,12 +60,14 @@ def arrange_complete_data(train):
 
             # Owner data
             owner_id = du.get_acc_owner(acc_id, dispositions, disp_reader)
-            print("id")
-            print(owner_id)
             owner = du.get_client(clients, clients_reader, owner_id)
-            print("OWNER")
-            print(owner)
 
+            owner_age = owner[0][1]
+            owner_loan_age = du.calculate_loan_age(owner_age, loan[2])
+
+            owner_gender = owner[0][3]
+
+            client_data = [owner_loan_age]
 
             dist_id = int(account[1])
             district = du.get_district(districts, dist_reader, dist_id)
@@ -97,6 +99,7 @@ def arrange_complete_data(train):
                 len([trans for trans in last_trans if trans['balance'] <= 0])]
 
             data_row.extend(dist_data)
+            data_row.extend(client_data)
 
             if train:
                 data_row.append(loan[6])
