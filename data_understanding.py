@@ -5,6 +5,8 @@ import itertools
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import datetime
+from datetime import date
 
 plt.rcParams['font.size'] = 8.0
 
@@ -82,6 +84,8 @@ def analyse_clients():
         for client in clients_reader:
             if len(client) == 3:
                 client_accs = len(get_client_accounts(int(client[0]), dispositions, disp_reader, accounts, acc_reader))
+                client_age = get_client_age(client[1])
+                client_gender = get_client_gender(client[1])
 
                 if client_accs in client_account_no:
                     client_account_no[client_accs] += 1
@@ -95,7 +99,7 @@ def analyse_clients():
 def analyse_districts():
     with open('./files/district.csv') as districts:
         attrs = {'inh': [], 'mun_lt_499': [], 'mun_500_1999': [], 'mun_2000_9999': [], 'mun_gt_10000': [],
-            'cities': [], 'urban_inh_r': [], 'avg_salary': [], 'unemp_95': [], 'unemp_96': [], 'enterp_p_1000': [], 
+            'cities': [], 'urban_inh_r': [], 'avg_salary': [], 'unemp_95': [], 'unemp_96': [], 'enterp_p_1000': [],
             'crimes_95': [], 'crimes_96': []}
         dist_reader = csv.reader(districts, delimiter=';')
         next(dist_reader)
@@ -123,7 +127,7 @@ def analyse_districts():
                     attrs['crimes_95'].append(float(row[14]))
                 except ValueError:
                     pass
-                
+
                 attrs['crimes_96'].append(int(row[15]))
 
         attr_data['dist_avg_95_ur'] =  sum(attrs['unemp_95']) / len(attrs['unemp_95'])
@@ -263,7 +267,7 @@ def calc_missing_values():
         dist_reader = csv.reader(districts, delimiter=';')
         next(loans_reader)
 
-        missing_vals_count = {'missing_districts': 0, 'missing_loans': 0, 'missing_dispositions': 0, 
+        missing_vals_count = {'missing_districts': 0, 'missing_loans': 0, 'missing_dispositions': 0,
             'missing_accounts': 0}
 
         for row in loans_reader:
@@ -289,7 +293,7 @@ def calc_missing_values():
             for key in missing_vals.keys():
                 if missing_vals[key]:
                     missing_vals_count[key] += 1
-            
+
         print('\n--- Missing Required ID Matches ---')
         for key in missing_vals_count.keys():
             print(key + ': ' + str(missing_vals_count[key]))
@@ -362,6 +366,26 @@ def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader)
                     break
 
     return accs
+
+# TODO: CHANGE FOR AGE OF LOAN INSTEAD OF CURRENT AGE
+# Returns the age of a client
+def get_client_age(birthdate):
+    day = int(birthdate[4:])
+    month = int(birthdate[2:4])
+    year = int(birthdate[:2])
+
+    if int(month) > 12:
+        month -= 50
+
+    today = date.today()
+    return today.year - (1900 + year) - ((today.month, today.day) < (month, day))
+
+# Returns the gender of a client
+def get_client_gender(birthdate):
+    month = birthdate[2:4]
+    if int(month) > 12:
+        return 'F'
+    return 'M'
 
 # Returns the loans associated with a given account
 def get_account_loans(loans_file, loans_reader, acc_id):

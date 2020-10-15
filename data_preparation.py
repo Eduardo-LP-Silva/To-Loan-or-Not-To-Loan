@@ -10,13 +10,13 @@ import data_understanding as du
 
 # column headers for final training / testing data
 col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_withdrawals', 'negative_balance',
-    'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96', 
+    'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96',
     'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
     'status']
 
 # Generates new development csv with all relevant data from most csv's
 def arrange_complete_data(train):
-    attr_data = du.analyse_data()
+    attr_data = du.analyse_data(clients=True)
     clean_data(attr_data)
     loan_path, card_path, transaction_path = '', '', ''
 
@@ -28,8 +28,8 @@ def arrange_complete_data(train):
         loan_path = './files/loan_test.csv'
         card_path = './files/card_test.csv'
         transaction_path = './files/trans_test.csv'
-    
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts, open('./files/disp_clean.csv') as dispositions: 
+
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts, open('./files/disp_clean.csv') as dispositions:
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
@@ -70,7 +70,7 @@ def arrange_complete_data(train):
             # choose only relevant district data
             dist_data = [district[3], district[10], district[11], district[12], district[14], district[15]]
             acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
-            
+
             if len(acc_dispositions) == 0:
                 if train:
                     continue
@@ -85,7 +85,7 @@ def arrange_complete_data(train):
             data_row = [loan[0], loan[3], loan[5], last_trans[0]['balance'],
                 np.mean([trans['balance'] for trans in last_trans]), np.mean(last_wds) if len(last_wds) > 0 else 0,
                 len([trans for trans in last_trans if trans['balance'] <= 0])]
-            
+
             data_row.extend(dist_data)
 
             if train:
@@ -93,7 +93,7 @@ def arrange_complete_data(train):
 
             complete_data_writer.writerow(data_row)
 
-# One hot encodes a single data piece given the possible set of labels 
+# One hot encodes a single data piece given the possible set of labels
 def one_hot_encode(labels, data):
     i = 0
     encoded = []
@@ -141,7 +141,7 @@ def arrange_train_test_data(attr_data):
             else:
                 # test data can be written to csv since it must not be altered
                 test_writer.writerow(dev_row)
-                     
+
             i += 1
 
         # make it so there's an equal number of positive and negative training cases
@@ -157,7 +157,7 @@ def arrange_train_test_data(attr_data):
             elif status == 1 and train_data_status[1] < max_cases:
                 train_data_status[1] += 1
                 train_writer.writerow(train_row)
-                        
+
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data):
     clean_dispositions()
@@ -223,7 +223,7 @@ def clean_loans():
             if len(row) == 7:
                 status = int(row[6])
                 pred_attrs = {'amount': int(row[3]), 'duration': int(row[4]), 'payments': int(row[5])}
-                
+
                 # convert to standard binary classification (-1 is positive class)
                 if status == -1:
                     row[6] = 1
