@@ -78,6 +78,7 @@ def analyse_clients():
         disp_reader = csv.reader(dispositions, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         client_account_no = {}
+        gender_list = {'male': 0, 'female': 0}
 
         next(clients_reader)
 
@@ -86,7 +87,11 @@ def analyse_clients():
                 client_accs = len(get_client_accounts(int(client[0]), dispositions, disp_reader, accounts, acc_reader))
                 # TODO
                 # client_age = get_client_age(client[1])
-                # client_gender = get_client_gender(client[1])
+                client_gender = get_client_gender(client[1])
+                if client_gender == 0:
+                    gender_list['male'] += 1
+                else:
+                    gender_list['female'] += 1
 
                 if client_accs in client_account_no:
                     client_account_no[client_accs] += 1
@@ -94,6 +99,7 @@ def analyse_clients():
                     client_account_no[client_accs] = 1
 
         plot_pie(client_account_no.values(), client_account_no.keys(), 'Accounts per Client')
+        plot_pie(gender_list.values(), gender_list.keys(), 'Clients Gender')
 
 
 # Analyses districts csv and produces box charts for each relevant attribute
@@ -226,37 +232,64 @@ def analyse_accounts(detailed):
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
-    attrs = {'amount': [], 'duration': [], 'payments': []}
-    status_disp = pd.DataFrame([[0, 0], [0, 0]], columns=['1', '2'], index=['Unsuccessful', 'Successful'])
-    loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
-    dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
+    with open('./files/disp_clean.csv') as dispositions1, open('./files/client_clean.csv') as clients:
+        disp_reader = csv.reader(dispositions1, delimiter=';')
+        clients_reader = csv.reader(clients, delimiter=';')
 
-    for i, loan in loans.iterrows():
-        if len(loan) == 7:
-            status = loan['status']
-            row = -1
+        attrs = {'amount': [], 'duration': [], 'payments': []}
+        status_disp = pd.DataFrame([[0, 0], [0, 0]], columns=['1', '2'], index=['Unsuccessful', 'Successful'])
+        loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
+        dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
+        age_dist = {'0-19':0, '20-29':0,'30-39':0, '40-49':0, '50-59':0, '60-69':0, '70+':0}
 
-            for attr_key in attrs.keys():
-                attrs[attr_key].append(loan[attr_key])
+        for i, loan in loans.iterrows():
+            if len(loan) == 7:
+                status = loan['status']
+                row = -1
 
-            disp_no = str(len(dispositions[dispositions['account_id'] == loan['account_id']]))
+                acc_id = int(loan[1])
+                owner_id = get_acc_owner(acc_id, dispositions1, disp_reader)
+                owner = get_client(clients, clients_reader, owner_id)
+                owner_age = owner[0][1]
+                owner_loan_age = calculate_loan_age(owner_age, str(loan[2]))
 
-            if status == 1:
-                attr_data['loan_status_appr'] += 1
-                row = 'Successful'
-            else:
-                attr_data['loan_status_rej'] += 1
-                row = 'Unsuccessful'
+                if owner_loan_age < 20:
+                    age_dist['0-19'] += 1
+                elif owner_loan_age >= 20 and owner_loan_age < 30:
+                    age_dist['20-29'] += 1
+                elif owner_loan_age >= 30 and owner_loan_age < 40:
+                    age_dist['30-39'] += 1
+                elif owner_loan_age >= 40 and owner_loan_age < 50:
+                    age_dist['40-49'] += 1
+                elif owner_loan_age >= 50 and owner_loan_age < 60:
+                    age_dist['50-59'] += 1
+                elif owner_loan_age >= 60 and owner_loan_age < 70:
+                    age_dist['60-69'] += 1
+                elif owner_loan_age >= 70:
+                    age_dist['70+'] += 1
 
-            status_disp.at[row, disp_no] += 1
+                for attr_key in attrs.keys():
+                    attrs[attr_key].append(loan[attr_key])
 
-    axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
-    fig = axis.get_figure()
-    fig.savefig('./figures/Disposition No. & Status.png')
-    plt.close()
+                disp_no = str(len(dispositions[dispositions['account_id'] == loan['account_id']]))
 
-    plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
-    plot_box(attrs, 'Loans')
+                if status == 1:
+                    attr_data['loan_status_appr'] += 1
+                    row = 'Successful'
+                else:
+                    attr_data['loan_status_rej'] += 1
+                    row = 'Unsuccessful'
+
+                status_disp.at[row, disp_no] += 1
+
+        axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
+        fig = axis.get_figure()
+        fig.savefig('./figures/Disposition No. & Status.png')
+        plt.close()
+
+        plot_pie(age_dist.values(), age_dist.keys(), 'Clients Age at Loan')
+        plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
+        plot_box(attrs, 'Loans')
 
 # Calculates (necessary) missing and / or not loan linked values
 def calc_missing_values():
