@@ -290,11 +290,11 @@ def analyse_loans():
 
 # Calculates (necessary) missing and / or not loan linked values
 def calc_missing_values():
-    with open('./files/loan_train.csv') as loans, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/district.csv') as districts:
+    with open('./files/loan_train.csv') as loans, open('./files/card_train.csv') as cards:
         loans_reader = csv.reader(loans, delimiter=';')
-        acc_reader = csv.reader(accounts, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
-        dist_reader = csv.reader(districts, delimiter=';')
+        accounts = pd.read_csv('./files/account.csv', sep=';', header=0, index_col=False)
+        districts = pd.read_csv('./files/district.csv', sep=';', header=0, index_col=False)
         dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
         next(loans_reader)
 
@@ -305,12 +305,12 @@ def calc_missing_values():
             if len(row) == 7:
                 acc_id = int(row[1])
                 missing_vals = {'missing_districts': True, 'missing_dispositions': True, 'missing_accounts': True}
-                account = get_account(accounts, acc_reader, acc_id)
+                account = get_account(accounts, acc_id)
 
                 if len(account) > 0:
                     missing_vals['missing_accounts'] = False
                     dist_id = int(account[1])
-                    district = get_district(districts, dist_reader, dist_id)
+                    district = get_district(districts, dist_id)
                     dispositions_list = get_dispositions(dispositions, acc_id)
 
                     if len(district) > 0:
@@ -511,26 +511,12 @@ def get_dispositions(dispositions, acc_id):
     return dispositions[dispositions['account_id'] == acc_id]
 
 # Returns a district given a district id
-def get_district(districts_file, dist_reader, dist_id):
-    districts_file.seek(0)
-    next(dist_reader)
-
-    for district in dist_reader:
-        if len(district) == 16 and int(district[0]) == dist_id:
-            return district
-
-    return []
+def get_district(districts, dist_id):
+    return districts[districts['code '] == dist_id].iloc[0]
 
 # Returns an account given an account id
-def get_account(accounts_file, acc_reader, acc_id):
-    accounts_file.seek(0)
-    next(acc_reader)
-
-    for account in acc_reader:
-        if len(account) == 4 and int(account[0]) == acc_id:
-            return account
-
-    return []
+def get_account(accounts, acc_id):
+    return accounts[accounts['account_id'] == acc_id].iloc[0]
 
 # Plots a confusion matrix
 def plot_confusion_matrix(cm, classes, title):
