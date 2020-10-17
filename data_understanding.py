@@ -63,13 +63,15 @@ def analyse_transactions():
                 trans_attrs['amount'].append(float(trans[5]))
                 trans_attrs['balance'].append(float(trans[6]))
 
-        attr_data['trans_op_mode'] = max(trans_operations.items(), key=operator.itemgetter(1))[0]
-        attr_data['trans_k_mode'] = max(trans_ks.items(), key=operator.itemgetter(1))[0]
-
         plot_pie(trans_types.values(), trans_types.keys(), 'Transaction Types')
         plot_pie(trans_operations.values(), trans_operations.keys(), 'Transaction Operations')
         plot_pie(trans_ks.values(), trans_ks.keys(), 'Transaction K Symbols')
         plot_box(trans_attrs, 'Transaction')
+
+        trans_operations.pop('Missing')
+        trans_ks.pop('Missing')
+        attr_data['trans_op_mode'] = max(trans_operations.items(), key=operator.itemgetter(1))[0]
+        attr_data['trans_k_mode'] = max(trans_ks.items(), key=operator.itemgetter(1))[0]
 
 # Analyses the clients csv and produces the number of accounts per client plot
 def analyse_clients():

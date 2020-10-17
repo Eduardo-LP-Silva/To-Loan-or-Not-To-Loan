@@ -23,11 +23,11 @@ def arrange_complete_data(train):
     if train:
         loan_path = './files/loan_train.csv'
         card_path = './files/card_train.csv'
-        transaction_path = './files/trans_train.csv'
+        transaction_path = './files/trans_train_clean.csv'
     else:
         loan_path = './files/loan_test.csv'
         card_path = './files/card_test.csv'
-        transaction_path = './files/trans_test.csv'
+        transaction_path = './files/trans_test_clean.csv'
 
     with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts:
         loan_reader = csv.reader(loans, delimiter=';')
@@ -89,6 +89,7 @@ def arrange_complete_data(train):
             acc_trans = du.get_acc_transactions(transactions, acc_id)
             last_trans = du.get_acc_last_transactions(acc_trans, du.parse_date(loan[2]))
             last_wds = [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal']
+            wc = [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash']
 
             data_row = [loan[0], loan[3], loan[5], last_trans[0]['balance'],
                 np.mean([trans['balance'] for trans in last_trans]), np.mean(last_wds) if len(last_wds) > 0 else 0,
@@ -170,16 +171,32 @@ def arrange_train_test_data(attr_data):
 def clean_data(attr_data):
     clean_clients()
     clean_dispositions()
+    clean_transactions(attr_data['trans_op_mode'], attr_data['trans_k_mode'])
     clean_districts(attr_data['dist_avg_95_ur'], attr_data['dist_avg_95_cr'])
 
-'''
-# Cleans transactions files by replacing missing K symbols and operations with the most common ones, respectively
+
+# Cleans transactions files
 def clean_transactions(op_mode, k_mode):
-    with open('./files/trans_train.csv') as transactions_train, open('./files/trans_train_clean.csv', 'w', newline='') as transactions_train_clean, open('./files/trans_test.csv') as transactions_train, open('./files/trans_train_clean.csv', 'w', newline='') as transactions_train_clean:
-        dist_reader = csv.reader(districts, delimiter=';')
-        dist_writer = csv.writer(districts_clean, delimiter=';')
-        dist_writer.writerow(next(dist_reader))
-'''
+    print(k_mode)
+    with open('./files/trans_train.csv') as transactions_train, open('./files/trans_train_clean.csv', 'w', newline='') as transactions_train_clean, open('./files/trans_test.csv') as transactions_test, open('./files/trans_test_clean.csv', 'w', newline='') as transactions_test_clean:
+        read_files = [transactions_train, transactions_test]
+        write_files = [transactions_train_clean, transactions_test_clean]
+
+        for i in range(len(read_files)):
+            reader = csv.reader(read_files[i], delimiter=';')
+            writer = csv.writer(write_files[i], delimiter=';')
+            writer.writerow(next(reader))
+
+            for trans in reader:
+                if len(trans) == 10:
+                    if not trans[4] or trans[4].isspace(): # Operation
+                        trans[4] = op_mode
+
+                    if not trans[7] or trans[7].isspace(): # K-Symbol
+                        trans[7] = k_mode
+
+                    writer.writerow(trans)
+
 
 # Replaces missing values in the 95 unemployment and crime rates columns with their average
 def clean_districts(avg_95_ur, avg_95_cr):
@@ -201,7 +218,6 @@ def clean_districts(avg_95_ur, avg_95_cr):
                     dist[14] = avg_95_cr
 
                 dist_writer.writerow(dist)
-
 
 # Copies dispositions complete records and changes type to binary form
 def clean_dispositions():
