@@ -11,7 +11,7 @@ import data_understanding as du
 # column headers for final training / testing data
 col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_withdrawals', 'negative_balance',
     'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96',
-    'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96', 'loan age',
+    'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
     'status']
 
 # Generates new development csv with all relevant data from most csv's
@@ -29,15 +29,16 @@ def arrange_complete_data(train):
         card_path = './files/card_test.csv'
         transaction_path = './files/trans_test.csv'
 
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts, open('./files/disp_clean.csv') as dispositions, open('./files/client_clean.csv') as clients:
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open('./files/account.csv') as accounts, open(card_path) as cards, open('./files/district_clean.csv') as districts:
         loan_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
-        disp_reader = csv.reader(dispositions, delimiter=';')
-        clients_reader = csv.reader(clients, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
         complete_data_writer = csv.writer(complete_data_file, delimiter=';')
         transactions = pd.read_csv(transaction_path, sep=';', header=0, index_col=False, low_memory=False)
+        dispositions = pd.read_csv('./files/disp_clean.csv', sep=';', header=0, index_col=False)
+        clients = pd.read_csv('./files/client_clean.csv', sep=';', header=0, index_col=False)
+
         next(loan_reader)
 
         header = col_names.copy()
@@ -59,15 +60,10 @@ def arrange_complete_data(train):
                     return
 
             # Owner data
-            owner_id = du.get_acc_owner(acc_id, dispositions, disp_reader)
-            owner = du.get_client(clients, clients_reader, owner_id)
-
-            owner_age = owner[0][1]
-            owner_loan_age = du.calculate_loan_age(owner_age, loan[2])
-
-            owner_gender = owner[0][3]
-
-            client_data = [owner_loan_age]
+            '''
+            owner = du.get_acc_owner(acc_id, dispositions, clients)
+            loan_owner_age = du.calculate_loan_client_age(str(owner['birth_number']), loan[2])
+            '''
 
             dist_id = int(account[1])
             district = du.get_district(districts, dist_reader, dist_id)
@@ -81,7 +77,7 @@ def arrange_complete_data(train):
 
             # choose only relevant district data
             dist_data = [district[3], district[10], district[11], district[12], district[14], district[15]]
-            acc_dispositions = du.get_dispositions(dispositions, disp_reader, acc_id)
+            acc_dispositions = du.get_dispositions(dispositions, acc_id)
 
             if len(acc_dispositions) == 0:
                 if train:
@@ -99,7 +95,6 @@ def arrange_complete_data(train):
                 len([trans for trans in last_trans if trans['balance'] <= 0])]
 
             data_row.extend(dist_data)
-            data_row.extend(client_data)
 
             if train:
                 data_row.append(loan[6])
@@ -226,21 +221,20 @@ def clean_dispositions():
 
                 disp_writer.writerow(disp)
 
-# Copies client ids and districts as well as adding their age and gender
+# Copies client ids and districts and adds their normalized date of birth and gender
 def clean_clients():
     with open('./files/client.csv') as clients, open('./files/client_clean.csv', 'w', newline='') as clients_clean:
         client_reader = csv.reader(clients, delimiter=';')
         client_writer = csv.writer(clients_clean, delimiter=';')
-        header = ['client_id', 'age', 'district_id', 'gender']
+        header = ['client_id', 'birth_number', 'district_id', 'gender']
         client_writer.writerow(header)
         next(client_reader)
 
         for client in client_reader:
             if len(client) == 3:
                 gender = du.get_client_gender(client[1])
-                age = du.get_client_age(client[1])
-
-                client[1] = age
+                dob = du.normalize_client_dob(client[1])
+                client[1] = dob
                 client.append(gender)
 
                 client_writer.writerow(client)

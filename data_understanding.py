@@ -169,9 +169,9 @@ def analyse_cards():
 
 # Analyses accounts csv and produces various statistics regarding them
 def analyse_accounts(detailed):
-    with open('./files/account.csv') as accounts, open('./files/disp.csv') as dispositions_file, open('./files/card_train.csv') as cards, open('./files/loan_train.csv') as loans:
+    with open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/loan_train.csv') as loans:
         acc_reader = csv.reader(accounts, delimiter=';')
-        disp_reader = csv.reader(dispositions_file, delimiter=';')
+        dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
         freqs = {'Monthly': 0, 'Weekly': 0, 'After Transaction': 0}
 
         if detailed:
@@ -196,16 +196,16 @@ def analyse_accounts(detailed):
                     freqs['After Transaction'] += 1
 
                 if detailed:
-                    dispositions = get_dispositions(dispositions_file, disp_reader, acc_id)
-                    key = str(len(dispositions))
+                    acc_dispositions = get_dispositions(dispositions, acc_id)
+                    key = str(len(acc_dispositions))
 
                     if key in disp_nos:
                         disp_nos[key] += 1
                     else:
                         disp_nos[key] = 1
 
-                    acc_owner_card[get_owner_card(cards, cards_reader, dispositions)] += 1
-                    card_no = sum(get_card_types_no(cards, cards_reader, dispositions))
+                    acc_owner_card[get_owner_card(cards, cards_reader, acc_dispositions)] += 1
+                    card_no = sum(get_card_types_no(cards, cards_reader, acc_dispositions))
 
                     if card_no in acc_cards_no:
                         acc_cards_no[card_no] += 1
@@ -232,73 +232,68 @@ def analyse_accounts(detailed):
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
-    with open('./files/disp_clean.csv') as dispositions1, open('./files/client_clean.csv') as clients:
-        disp_reader = csv.reader(dispositions1, delimiter=';')
-        clients_reader = csv.reader(clients, delimiter=';')
+    attrs = {'amount': [], 'duration': [], 'payments': []}
+    status_disp = pd.DataFrame([[0, 0], [0, 0]], columns=['1', '2'], index=['Unsuccessful', 'Successful'])
+    loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
+    dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
+    clients = pd.read_csv('./files/client.csv', sep=';', header=0, index_col=False)
+    age_dist = {'0-19':0, '20-29':0,'30-39':0, '40-49':0, '50-59':0, '60-69':0, '70+':0}
 
-        attrs = {'amount': [], 'duration': [], 'payments': []}
-        status_disp = pd.DataFrame([[0, 0], [0, 0]], columns=['1', '2'], index=['Unsuccessful', 'Successful'])
-        loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
-        dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
-        age_dist = {'0-19':0, '20-29':0,'30-39':0, '40-49':0, '50-59':0, '60-69':0, '70+':0}
+    for i, loan in loans.iterrows():
+        if len(loan) == 7:
+            status = loan['status']
+            row = -1
 
-        for i, loan in loans.iterrows():
-            if len(loan) == 7:
-                status = loan['status']
-                row = -1
+            acc_id = loan['account_id']
+            owner = get_acc_owner(acc_id, dispositions, clients)
+            owner_loan_age = calculate_loan_client_age(str(owner['birth_number']), str(loan['date']))
 
-                acc_id = int(loan[1])
-                owner_id = get_acc_owner(acc_id, dispositions1, disp_reader)
-                owner = get_client(clients, clients_reader, owner_id)
-                owner_age = owner[0][1]
-                owner_loan_age = calculate_loan_age(owner_age, str(loan[2]))
+            if owner_loan_age < 20:
+                age_dist['0-19'] += 1
+            elif owner_loan_age >= 20 and owner_loan_age < 30:
+                age_dist['20-29'] += 1
+            elif owner_loan_age >= 30 and owner_loan_age < 40:
+                age_dist['30-39'] += 1
+            elif owner_loan_age >= 40 and owner_loan_age < 50:
+                age_dist['40-49'] += 1
+            elif owner_loan_age >= 50 and owner_loan_age < 60:
+                age_dist['50-59'] += 1
+            elif owner_loan_age >= 60 and owner_loan_age < 70:
+                age_dist['60-69'] += 1
+            elif owner_loan_age >= 70:
+                age_dist['70+'] += 1
 
-                if owner_loan_age < 20:
-                    age_dist['0-19'] += 1
-                elif owner_loan_age >= 20 and owner_loan_age < 30:
-                    age_dist['20-29'] += 1
-                elif owner_loan_age >= 30 and owner_loan_age < 40:
-                    age_dist['30-39'] += 1
-                elif owner_loan_age >= 40 and owner_loan_age < 50:
-                    age_dist['40-49'] += 1
-                elif owner_loan_age >= 50 and owner_loan_age < 60:
-                    age_dist['50-59'] += 1
-                elif owner_loan_age >= 60 and owner_loan_age < 70:
-                    age_dist['60-69'] += 1
-                elif owner_loan_age >= 70:
-                    age_dist['70+'] += 1
+            for attr_key in attrs.keys():
+                attrs[attr_key].append(loan[attr_key])
 
-                for attr_key in attrs.keys():
-                    attrs[attr_key].append(loan[attr_key])
+            disp_no = str(len(dispositions[dispositions['account_id'] == loan['account_id']]))
 
-                disp_no = str(len(dispositions[dispositions['account_id'] == loan['account_id']]))
+            if status == 1:
+                attr_data['loan_status_appr'] += 1
+                row = 'Successful'
+            else:
+                attr_data['loan_status_rej'] += 1
+                row = 'Unsuccessful'
 
-                if status == 1:
-                    attr_data['loan_status_appr'] += 1
-                    row = 'Successful'
-                else:
-                    attr_data['loan_status_rej'] += 1
-                    row = 'Unsuccessful'
+            status_disp.at[row, disp_no] += 1
 
-                status_disp.at[row, disp_no] += 1
+    axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
+    fig = axis.get_figure()
+    fig.savefig('./figures/Disposition No. & Status.png')
+    plt.close()
 
-        axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
-        fig = axis.get_figure()
-        fig.savefig('./figures/Disposition No. & Status.png')
-        plt.close()
-
-        plot_pie(age_dist.values(), age_dist.keys(), 'Clients Age at Loan')
-        plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
-        plot_box(attrs, 'Loans')
+    plot_pie(age_dist.values(), age_dist.keys(), 'Clients Age at Loan Request')
+    plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
+    plot_box(attrs, 'Loans')
 
 # Calculates (necessary) missing and / or not loan linked values
 def calc_missing_values():
-    with open('./files/loan_train.csv') as loans, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/disp.csv') as dispositions, open('./files/district.csv') as districts:
+    with open('./files/loan_train.csv') as loans, open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/district.csv') as districts:
         loans_reader = csv.reader(loans, delimiter=';')
         acc_reader = csv.reader(accounts, delimiter=';')
         cards_reader = csv.reader(cards, delimiter=';')
-        disp_reader = csv.reader(dispositions, delimiter=';')
         dist_reader = csv.reader(districts, delimiter=';')
+        dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
         next(loans_reader)
 
         missing_vals_count = {'missing_districts': 0, 'missing_loans': 0, 'missing_dispositions': 0,
@@ -314,7 +309,7 @@ def calc_missing_values():
                     missing_vals['missing_accounts'] = False
                     dist_id = int(account[1])
                     district = get_district(districts, dist_reader, dist_id)
-                    dispositions_list = get_dispositions(dispositions, disp_reader, acc_id)
+                    dispositions_list = get_dispositions(dispositions, acc_id)
 
                     if len(district) > 0:
                         missing_vals['missing_districts'] = False
@@ -331,6 +326,7 @@ def calc_missing_values():
         print('\n--- Missing Required ID Matches ---')
         for key in missing_vals_count.keys():
             print(key + ': ' + str(missing_vals_count[key]))
+        print('\n')
 
 '''
 def get_income(acc_transactions):
@@ -406,25 +402,17 @@ def get_client(clients_file, clients_reader, client_id):
     clients_file.seek(0)
     next(clients_file)
 
-    client_data = []
-
     for client in clients_reader:
         if len(client) == 4 and int(client[0]) == int(client_id):
-            client_data.append(client)
+            return client
 
-    return client_data
+    return []
 
-# Returns the client owner of a given account
-def get_acc_owner(account_id, disp_file, disp_reader):
-    owner = []
+# Returns the owner's info of a given account
+def get_acc_owner(account_id, dispositions, clients):
+    client_id = dispositions[dispositions['account_id'] == account_id]['client_id'].iloc[0]
 
-    disp_file.seek(0)
-    next(disp_reader)
-
-    for disp in disp_reader:
-        if len(disp) == 4 and int(disp[2]) == account_id:
-            return disp[1]
-    return
+    return clients[clients['client_id'] == client_id].iloc[0]
 
 # Returns the age of a client
 def get_client_age(birthdate):
@@ -441,20 +429,26 @@ def get_client_age(birthdate):
 # Returns the gender of a client
 def get_client_gender(birthdate):
     month = birthdate[2:4]
+
     if int(month) > 12:
         return 1 # female
+
     return 0 # male
 
-# Returns the age a certain client had when he asked for the loan, given the client's current age and the loan date
-def calculate_loan_age(client_age, loan_date):
-    loan_day = int(loan_date[4:])
-    loan_month = int(loan_date[2:4])
-    loan_year = int(loan_date[:2])
+def normalize_client_dob(client_dob):
+    client_dob_month = int(client_dob[2:4])
 
-    today = date.today()
-    loan_age = today.year - (1900 + loan_year) - ((today.month, today.day) < (loan_month, loan_day))
+    if client_dob_month > 12:
+        client_dob = client_dob[:2] + str(client_dob_month - 50).zfill(2) + client_dob[4:]
 
-    return int(client_age) - loan_age
+    return client_dob
+
+# Returns the age a certain client had when he asked for the loan, given the client's date of birth and the loan date
+def calculate_loan_client_age(client_dob, loan_date):
+    loan_date = parse_date(loan_date)
+    client_dob = parse_date(normalize_client_dob(client_dob))
+
+    return loan_date[0] - client_dob[0]
 
 # Returns the loans associated with a given account
 def get_account_loans(loans_file, loans_reader, acc_id):
@@ -473,8 +467,8 @@ def get_account_loans(loans_file, loans_reader, acc_id):
 def get_card_types_no(cards_file, cards_reader, dispositions):
     classic_no, junior_no, gold_no = 0, 0, 0
 
-    for disposition in dispositions:
-        disp_id = int(disposition[0])
+    for _, disposition in dispositions.iterrows():
+        disp_id = disposition['disp_id']
         cards_file.seek(0)
         next(cards_reader)
 
@@ -493,11 +487,9 @@ def get_card_types_no(cards_file, cards_reader, dispositions):
 
 # Returns the (client_id, disposition_id) of the owner of an account given the ASSOCIATED dispositions
 def get_account_owner_info(dispositions):
-    for disposition in dispositions:
-        if disposition[3] == 'OWNER' or int(disposition[3]) == 1:
-            return (int(disposition[1]), int(disposition[0]))
+    acc_owner = dispositions[dispositions['type'] == 'OWNER' or dispositions['type'] == 1].iloc[0]
 
-    return ()
+    return (acc_owner.at['client_id'], acc_owner.at['disp_id'])
 
 # Returns the card type (or none) of the owner of an account given the ASSOCIATED dispositions
 def get_owner_card(cards_file, cards_reader, acc_dispositions):
@@ -513,16 +505,8 @@ def get_owner_card(cards_file, cards_reader, acc_dispositions):
     return 'none'
 
 # Returns the dispositions associated with an account given an account id
-def get_dispositions(dispositions_file, disp_reader, acc_id):
-    dispositions = []
-    dispositions_file.seek(0)
-    next(disp_reader)
-
-    for disposition in disp_reader:
-        if len(disposition) == 4 and int(disposition[2]) == acc_id:
-            dispositions.append(disposition)
-
-    return dispositions
+def get_dispositions(dispositions, acc_id):
+    return dispositions[dispositions['account_id'] == acc_id]
 
 # Returns a district given a district id
 def get_district(districts_file, dist_reader, dist_id):
