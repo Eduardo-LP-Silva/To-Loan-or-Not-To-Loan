@@ -87,22 +87,13 @@ def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
 
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5,
         max_depth=None, n_estimators=500, random_state=42)
     clf_original = clone(clf)
+
     # data = load_loan_data()
     # rewrite_loans(data, [95], [96])
     # x_train, y_train, x_test, y_test = date_split()
-
-    negative_percent_train = (len(y_train[y_train.values == -1]) / len(y_train)) * 100
-    negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
-    positive_test_cases = len(y_test[y_test.values == 1])
-    negative_test_cases = len(y_test[y_test.values == -1])
-
-    print('\nPositive training cases:' + str(len(y_train[y_train.values == 1])))
-    print('Negative training cases:' + str(len(y_train[y_train.values == -1])))
-    print('Positive test cases:' + str(positive_test_cases))
-    print('Negative test cases:' + str(negative_test_cases))
 
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
     x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
@@ -115,7 +106,7 @@ def build_model(hp_grid_search=False):
 
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
     evaluate_model_kfold(clf_original, x, y)
-    
+
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
@@ -129,7 +120,7 @@ def evaluate_model_kfold(clf, x, y):
         n_jobs=-1)
 
     print('\n--- Repeated Stratified K-Fold Average Performance ---')
-    
+
     for key, vals in scores.items():
         if key.startswith('test_'):
             print('%s: %.2f' % (key, np.mean(vals)))
@@ -149,7 +140,7 @@ def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     print('F1: %.2f' % (f1_score(y_test, y_pred)))
     print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
 
-# Train / Test Stratified Dataset Split 
+# Train / Test Stratified Dataset Split
 def strat_train_test_split(x, y, test_size):
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=1, stratify=y)
 
@@ -157,7 +148,7 @@ def strat_train_test_split(x, y, test_size):
     negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
     positive_test_cases = len(y_test[y_test.values == 1])
     negative_test_cases = len(y_test[y_test.values == -1])
-    
+
     print('\nPositive training cases:' + str(len(y_train[y_train.values == 1])))
     print('Negative training cases:' + str(len(y_train[y_train.values == -1])))
     print('Positive test cases:' + str(positive_test_cases))
@@ -182,7 +173,7 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
 
     grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, n_jobs=-1, verbose=1)
     grid_search.fit(x_train, y_train)
-    
+
     print('\n--- Hyper Parameter Grid Search Results ---')
     print(grid_search.best_params_)
 
@@ -237,7 +228,7 @@ def get_feature_importance(clf):
 # Saves an image representing one of the forest's decision trees
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
-    plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'], 
+    plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'],
         filled=True)
     fig.savefig('./figures/decision_tree.png')
     plt.close()
@@ -261,7 +252,7 @@ def main():
     parser = argparse.ArgumentParser(description='Random Forest Classifier')
     parser.add_argument('-t', dest='test', action='store_true', default=False, help='Generate Kaggle test set predictions')
     parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
-    
+
     args = parser.parse_args()
     clf = build_model()
 
