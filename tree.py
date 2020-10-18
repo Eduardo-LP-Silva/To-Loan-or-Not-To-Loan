@@ -28,17 +28,76 @@ def load_data(train):
     else:
         return data[header]
 
+# Loads data from complete_data.csv and returns it in the form of a pandas data frame with loan_ids
+def load_loan_data():
+    data = pd.read_csv('./files/complete_data.csv', header=0, delimiter=';')
+    header = list(dp.complete_data_row.keys()).copy()
+    return data[header]
+
+# Returns the year of a loan request given the loan_id
+def get_loan_year(loan_id):
+    with open('./files/loan_train.csv') as loans:
+        loan_reader = csv.reader(loans, delimiter=';')
+        next(loan_reader)
+
+        for row in loan_reader:
+
+            if len(row) == 7 and int(row[0]) == loan_id:
+                date = row[2]
+                return int(date[:2])
+
+# Splits data into new train and test files having in consideration the loan year
+def rewrite_loans(data, train_years, test_years):
+    with open('./files/loan_year_train.csv', 'w', newline='') as loan_year_train, open('./files/loan_year_test.csv', 'w', newline='') as loan_year_test:
+
+        train_writer = csv.writer(loan_year_train, delimiter=';')
+        test_writer = csv.writer(loan_year_test, delimiter=';')
+        header = list(dp.complete_data_row.keys()).copy()
+        train_writer.writerow(header)
+        test_writer.writerow(header)
+
+        for train_year in train_years:
+            for index, row in data.iterrows():
+                if get_loan_year(row['loan_id']) == train_year:
+                    train_writer.writerow(row)
+
+
+        for test_year in test_years:
+            for index, row in data.iterrows():
+                if get_loan_year(row['loan_id']) == test_year:
+                    test_writer.writerow(row)
+
+# Returns x_train, y_train, x_test, y_test splitted accordingly to the train and test dates
+def date_split():
+    train_data = pd.read_csv('./files/loan_year_train.csv', header=0, delimiter=';')
+    test_data = pd.read_csv('./files/loan_year_test.csv', header=0, delimiter=';')
+    header = list(dp.complete_data_row.keys()).copy()
+
+    feature_cols = header[1 : len(header) - 1]
+    x_train = train_data[feature_cols]
+    y_train = train_data.status
+
+    x_test = test_data[feature_cols]
+    y_test = test_data.status
+
+    return x_train, y_train, x_test, y_test
+
+
 # Builds the random forest model and calculates the accuracy and AUC score
 def build_model():
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=1, stratify=y)
 
+    # data = load_loan_data()
+    # rewrite_loans(data, [95], [96])
+    # x_train, y_train, x_test, y_test = date_split()
+
     negative_percent_train = (len(y_train[y_train.values == -1]) / len(y_train)) * 100
     negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
     positive_test_cases = len(y_test[y_test.values == 1])
     negative_test_cases = len(y_test[y_test.values == -1])
-    
+
     print('\nPositive training cases:' + str(len(y_train[y_train.values == 1])))
     print('Negative training cases:' + str(len(y_train[y_train.values == -1])))
     print('Positive test cases:' + str(positive_test_cases))
@@ -52,14 +111,14 @@ def build_model():
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5,
         max_depth=None, n_estimators=500, random_state=42)
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
 
     cm = confusion_matrix(y_test, y_pred)
     du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
-    
+
     prob_y = clf.predict_proba(x_test)
     prob_y = [p[1] for p in prob_y]
 
@@ -87,7 +146,7 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
 
     grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, n_jobs=-1, verbose=1)
     grid_search.fit(x_train, y_train)
-    
+
     print('\n--- Best Params ---')
     print(grid_search.best_params_)
 
@@ -129,9 +188,9 @@ def balance_train_dataset(x_train, y_train, ratio):
     x_train_balanced = pd.concat([x_train_majority_downsampled, x_train_minority])
     y_train_balanced = pd.concat([y_train_majority_downsampled, y_train_minority])
 
-    print('\nPositive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+    print('\nPositive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' +
         str(len(x_train_balanced[y_train_balanced.values == -1])))
-    print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+    print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' +
         str(len(y_train_balanced[y_train_balanced.values == -1])))
 
     return x_train_balanced, y_train_balanced
@@ -146,7 +205,7 @@ def get_feature_importance(clf):
 # Saves an image representing one of the forest's decision trees
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
-    tree.plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'], 
+    tree.plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'],
         filled=True)
     fig.savefig('./figures/decision_tree.png')
     plt.close()
