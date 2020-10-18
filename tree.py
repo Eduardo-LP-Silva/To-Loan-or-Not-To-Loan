@@ -1,15 +1,14 @@
 import csv
+import argparse
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+import numpy as np
+from sklearn.base import clone
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate, RepeatedStratifiedKFold
 from sklearn.dummy import DummyClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
-from sklearn import metrics
-from sklearn import tree
 import matplotlib.pyplot as plt
 import data_preparation as dp
 import data_understanding as du
@@ -84,11 +83,13 @@ def date_split():
 
 
 # Builds the random forest model and calculates the accuracy and AUC score
-def build_model():
+def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=1, stratify=y)
 
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
+        max_depth=None, n_estimators=500, random_state=42)
+    clf_original = clone(clf)
     # data = load_loan_data()
     # rewrite_loans(data, [95], [96])
     # x_train, y_train, x_test, y_test = date_split()
@@ -103,36 +104,71 @@ def build_model():
     print('Positive test cases:' + str(positive_test_cases))
     print('Negative test cases:' + str(negative_test_cases))
 
-    print('\nTraining negative cases ratio: %.2f' % negative_percent_train + '%')
-    print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
-
-    x_train_balanced, y_train_balanced = balance_train_dataset(x_train, y_train, 1)
+    x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
+    x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
 
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5,
-        max_depth=None, n_estimators=500, random_state=42)
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
 
-    cm = confusion_matrix(y_test, y_pred)
-    du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
-
-    prob_y = clf.predict_proba(x_test)
-    prob_y = [p[1] for p in prob_y]
-
-    get_feature_importance(clf)
-
-    dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
-
-    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
-    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
-
-    #hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+    eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
+    evaluate_model_kfold(clf_original, x, y)
+    
+    if hp_grid_search:
+        hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
     return clf
 
+# Evaluates a (untrained) model with repeated stratified k-folds
+def evaluate_model_kfold(clf, x, y):
+    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=42)
+
+    scores = cross_validate(clf, x, y, scoring=['roc_auc'], cv=cv,
+        n_jobs=-1)
+
+    print('\n--- Repeated Stratified K-Fold Average Performance ---')
+    
+    for key, vals in scores.items():
+        if key.startswith('test_'):
+            print('%s: %.2f' % (key, np.mean(vals)))
+
+# Evaluates a trained model given its training and test data sets, as well as its predictions
+def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
+    cm = confusion_matrix(y_test, y_pred)
+    du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
+
+    get_feature_importance(clf)
+    dummy_classifier(x_train, y_train, x_test, y_test)
+
+    print('\n--- Fitted Model Performance ---')
+    print('Accuracy: %.2f' % (accuracy_score(y_test, y_pred)))
+    print('Precision: %.2f' % (precision_score(y_test, y_pred)))
+    print('Recall: %.2f' % (recall_score(y_test, y_pred)))
+    print('F1: %.2f' % (f1_score(y_test, y_pred)))
+    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
+
+# Train / Test Stratified Dataset Split 
+def strat_train_test_split(x, y, test_size):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=1, stratify=y)
+
+    negative_percent_train = (len(y_train[y_train.values == -1]) / len(y_train)) * 100
+    negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
+    positive_test_cases = len(y_test[y_test.values == 1])
+    negative_test_cases = len(y_test[y_test.values == -1])
+    
+    print('\nPositive training cases:' + str(len(y_train[y_train.values == 1])))
+    print('Negative training cases:' + str(len(y_train[y_train.values == -1])))
+    print('Positive test cases:' + str(positive_test_cases))
+    print('Negative test cases:' + str(negative_test_cases))
+
+    print('\nTraining negative cases ratio: %.2f' % negative_percent_train + '%')
+    print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
+
+    return x_train, x_test, y_train, y_test
+
+# Executes a hyper parameter grid search on a Random Forest
 def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
     param_grid = {
         'max_features': ['sqrt', None],
@@ -146,13 +182,13 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
 
     grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, n_jobs=-1, verbose=1)
     grid_search.fit(x_train, y_train)
-
-    print('\n--- Best Params ---')
+    
+    print('\n--- Hyper Parameter Grid Search Results ---')
     print(grid_search.best_params_)
 
     y_pred = grid_search.predict(x_test)
 
-    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('Accuracy: %.1f' % (accuracy_score(y_test, y_pred) * 100) + '%')
     print('AUC Score: %.2f' % calc_auc(grid_search.best_estimator_, x_test, y_test))
 
 # Returns a model's AUC
@@ -162,18 +198,14 @@ def calc_auc(clf, x_test, y_test):
 
     return roc_auc_score(y_test, prob_y)
 
-# Returns a model's accuracy
-def calc_accuracy(y_test, y_pred):
-    return metrics.accuracy_score(y_test, y_pred)
-
 # Builds, trains and evaluates a dummy classifier
 def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy = DummyClassifier(strategy='most_frequent')
     dummy.fit(x_train, y_train)
-    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test) * 100) + '%')
+    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
 
 # Balances the training set given a ratio
-def balance_train_dataset(x_train, y_train, ratio):
+def undersample_majority_class(x_train, y_train, ratio):
     x_train_majority = x_train[y_train.values == 1]
     y_train_majority = y_train[y_train.values == 1]
 
@@ -205,7 +237,7 @@ def get_feature_importance(clf):
 # Saves an image representing one of the forest's decision trees
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
-    tree.plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'],
+    plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'], 
         filled=True)
     fig.savefig('./figures/decision_tree.png')
     plt.close()
@@ -226,9 +258,18 @@ def run_model(clf):
             pred_writer.writerow([int(loan_ids[i]), int(y_pred[i])])
 
 def main():
+    parser = argparse.ArgumentParser(description='Random Forest Classifier')
+    parser.add_argument('-t', dest='test', action='store_true', default=False, help='Generate Kaggle test set predictions')
+    parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
+    
+    args = parser.parse_args()
     clf = build_model()
-    visualize_tree(clf)
-    run_model(clf)
+
+    if args.vis_tree:
+        visualize_tree(clf)
+
+    if args.test:
+        run_model(clf)
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,6 @@
 
 import csv
+import argparse
 import pandas as pd
 import numpy as np
 from pandas import Series, DataFrame
@@ -378,7 +379,11 @@ def normalize_test_data():
     return normalized_x_test
 
 def main():
-    arrange_complete_data(True, True)
+    parser = argparse.ArgumentParser(description='Data Preparation')
+    parser.add_argument('-c', dest='clean', action='store_true', default=False, help='Clean CSVs')
+    args = parser.parse_args()
+
+    arrange_complete_data(True, args.clean)
     # arrange_data()
     # normalize_data()
 
