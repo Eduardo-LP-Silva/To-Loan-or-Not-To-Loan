@@ -2,6 +2,7 @@ import csv
 import argparse
 import pandas as pd
 import numpy as np
+from collections import Counter
 from sklearn.base import clone
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
@@ -9,6 +10,8 @@ from sklearn.model_selection import GridSearchCV, train_test_split, cross_valida
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 import matplotlib.pyplot as plt
 import data_preparation as dp
 import data_understanding as du
@@ -37,7 +40,8 @@ def build_model(hp_grid_search=False):
     clf_original = clone(clf)
 
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
-    x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
+    #x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
+    x_train_balanced, y_train_balanced = smote_and_undersample(x_train, y_train, 0.5, 10)
 
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
@@ -46,7 +50,7 @@ def build_model(hp_grid_search=False):
     y_pred = clf.predict(x_test)
 
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
-    evaluate_model_kfold(clf_original, x, y)
+    evaluate_model_kfold(clf_original, x_train_balanced, y_train_balanced)
     
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
@@ -84,16 +88,17 @@ def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
 # Train / Test Stratified Dataset Split 
 def strat_train_test_split(x, y, test_size):
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=1, stratify=y)
+    train_counter = Counter(y_train)
+    test_counter = Counter(y_test)
 
-    negative_percent_train = (len(y_train[y_train.values == -1]) / len(y_train)) * 100
-    negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
-    positive_test_cases = len(y_test[y_test.values == 1])
-    negative_test_cases = len(y_test[y_test.values == -1])
-    
-    print('\nPositive training cases:' + str(len(y_train[y_train.values == 1])))
-    print('Negative training cases:' + str(len(y_train[y_train.values == -1])))
-    print('Positive test cases:' + str(positive_test_cases))
-    print('Negative test cases:' + str(negative_test_cases))
+    negative_percent_train = (train_counter[-1] / len(y_train)) * 100
+    negative_percent_test = (test_counter[-1] / len(y_test)) * 100
+
+    print('\nAfter Stratification')
+    print('Positive training cases:' + str(train_counter[1]))
+    print('Negative training cases:' + str(train_counter[-1]))
+    print('Positive test cases:' + str(test_counter[1]))
+    print('Negative test cases:' + str(test_counter[-1]))
 
     print('\nTraining negative cases ratio: %.2f' % negative_percent_train + '%')
     print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
@@ -136,6 +141,24 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy.fit(x_train, y_train)
     print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
 
+def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
+    sm = SMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
+    x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
+    y_counter = Counter(y_upsampled)
+
+    print('\nAfter SMOTE (1/2)')
+    print('Positive, Negative training Y: %s' % y_counter)
+
+    rus = RandomUnderSampler(sampling_strategy=1, random_state=42)
+
+    x_undersampled, y_undersampled = rus.fit_resample(x_upsampled, y_upsampled)
+    y_counter = Counter(y_undersampled)
+
+    print('After Undersampling (2/2)')
+    print('Positive, Negative training Y: %s' % y_counter)
+
+    return x_undersampled, y_undersampled
+
 # Balances the training set given a ratio
 def undersample_majority_class(x_train, y_train, ratio):
     x_train_majority = x_train[y_train.values == 1]
@@ -152,7 +175,8 @@ def undersample_majority_class(x_train, y_train, ratio):
     x_train_balanced = pd.concat([x_train_majority_downsampled, x_train_minority])
     y_train_balanced = pd.concat([y_train_majority_downsampled, y_train_minority])
 
-    print('\nPositive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+    print('\nAfter Undersampling')
+    print('Positive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
         str(len(x_train_balanced[y_train_balanced.values == -1])))
     print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
         str(len(y_train_balanced[y_train_balanced.values == -1])))
