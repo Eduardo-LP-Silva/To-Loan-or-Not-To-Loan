@@ -2,9 +2,10 @@ import csv
 import argparse
 import pandas as pd
 import numpy as np
+from sklearn.base import clone
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate, RepeatedStratifiedKFold
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
@@ -30,37 +31,54 @@ def load_data(train):
 def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
+
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
+        max_depth=None, n_estimators=500, random_state=42)
+    clf_original = clone(clf)
+
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
     x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
 
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
-        max_depth=None, n_estimators=500, random_state=42)
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
 
-    eval_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
-
+    eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
+    evaluate_model_kfold(clf_original, x, y)
+    
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
     return clf
 
+# Evaluates a (untrained) model with repeated stratified k-folds
+def evaluate_model_kfold(clf, x, y):
+    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=42)
+
+    scores = cross_validate(clf, x, y, scoring=['roc_auc'], cv=cv,
+        n_jobs=-1)
+
+    print('\n--- Repeated Stratified K-Fold Average Performance ---')
+    
+    for key, vals in scores.items():
+        if key.startswith('test_'):
+            print('%s: %.2f' % (key, np.mean(vals)))
+
 # Evaluates a trained model given its training and test data sets, as well as its predictions
-def eval_model(clf, x_train, y_train, x_test, y_test, y_pred):
+def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     cm = confusion_matrix(y_test, y_pred)
     du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
 
     get_feature_importance(clf)
-
     dummy_classifier(x_train, y_train, x_test, y_test)
 
-    print('Accuracy: %.1f' % (accuracy_score(y_test, y_pred) * 100) + '%')
-    print('Precision: %.1f' % (precision_score(y_test, y_pred) * 100) + '%')
-    print('Recall: %.1f' % (recall_score(y_test, y_pred) * 100) + '%')
-    print('F1: %.1f' % (f1_score(y_test, y_pred) * 100) + '%')
+    print('\n--- Fitted Model Performance ---')
+    print('Accuracy: %.2f' % (accuracy_score(y_test, y_pred)))
+    print('Precision: %.2f' % (precision_score(y_test, y_pred)))
+    print('Recall: %.2f' % (recall_score(y_test, y_pred)))
+    print('F1: %.2f' % (f1_score(y_test, y_pred)))
     print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
 
 # Train / Test Stratified Dataset Split 
@@ -116,7 +134,7 @@ def calc_auc(clf, x_test, y_test):
 def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy = DummyClassifier(strategy='most_frequent')
     dummy.fit(x_train, y_train)
-    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test) * 100) + '%')
+    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
 
 # Balances the training set given a ratio
 def undersample_majority_class(x_train, y_train, ratio):
