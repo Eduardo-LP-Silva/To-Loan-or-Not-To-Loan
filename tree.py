@@ -30,14 +30,73 @@ def load_data(train):
     else:
         return data[header]
 
+# Loads data from complete_data.csv and returns it in the form of a pandas data frame with loan_ids
+def load_loan_data():
+    data = pd.read_csv('./files/complete_data.csv', header=0, delimiter=';')
+    header = list(dp.complete_data_row.keys()).copy()
+    return data[header]
+
+# Returns the year of a loan request given the loan_id
+def get_loan_year(loan_id):
+    with open('./files/loan_train.csv') as loans:
+        loan_reader = csv.reader(loans, delimiter=';')
+        next(loan_reader)
+
+        for row in loan_reader:
+
+            if len(row) == 7 and int(row[0]) == loan_id:
+                date = row[2]
+                return int(date[:2])
+
+# Splits data into new train and test files having in consideration the loan year
+def rewrite_loans(data, train_years, test_years):
+    with open('./files/loan_year_train.csv', 'w', newline='') as loan_year_train, open('./files/loan_year_test.csv', 'w', newline='') as loan_year_test:
+
+        train_writer = csv.writer(loan_year_train, delimiter=';')
+        test_writer = csv.writer(loan_year_test, delimiter=';')
+        header = list(dp.complete_data_row.keys()).copy()
+        train_writer.writerow(header)
+        test_writer.writerow(header)
+
+        for train_year in train_years:
+            for index, row in data.iterrows():
+                if get_loan_year(row['loan_id']) == train_year:
+                    train_writer.writerow(row)
+
+
+        for test_year in test_years:
+            for index, row in data.iterrows():
+                if get_loan_year(row['loan_id']) == test_year:
+                    test_writer.writerow(row)
+
+# Returns x_train, y_train, x_test, y_test splitted accordingly to the train and test dates
+def date_split():
+    train_data = pd.read_csv('./files/loan_year_train.csv', header=0, delimiter=';')
+    test_data = pd.read_csv('./files/loan_year_test.csv', header=0, delimiter=';')
+    header = list(dp.complete_data_row.keys()).copy()
+
+    feature_cols = header[1 : len(header) - 1]
+    x_train = train_data[feature_cols]
+    y_train = train_data.status
+
+    x_test = test_data[feature_cols]
+    y_test = test_data.status
+
+    return x_train, y_train, x_test, y_test
+
+
 # Builds the random forest model and calculates the accuracy and AUC score
 def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
 
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5,
         max_depth=None, n_estimators=500, random_state=42)
     clf_original = clone(clf)
+
+    # data = load_loan_data()
+    # rewrite_loans(data, [95], [96])
+    # x_train, y_train, x_test, y_test = date_split()
 
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
     #x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
@@ -65,7 +124,7 @@ def evaluate_model_kfold(clf, x, y):
         n_jobs=-1)
 
     print('\n--- Repeated Stratified K-Fold Average Performance ---')
-    
+
     for key, vals in scores.items():
         if key.startswith('test_'):
             print('%s: %.2f' % (key, np.mean(vals)))
@@ -85,7 +144,7 @@ def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     print('F1: %.2f' % (f1_score(y_test, y_pred)))
     print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
 
-# Train / Test Stratified Dataset Split 
+# Train / Test Stratified Dataset Split
 def strat_train_test_split(x, y, test_size):
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=1, stratify=y)
     train_counter = Counter(y_train)
@@ -119,7 +178,7 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
 
     grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, n_jobs=-1, verbose=1)
     grid_search.fit(x_train, y_train)
-    
+
     print('\n--- Hyper Parameter Grid Search Results ---')
     print(grid_search.best_params_)
 
@@ -178,7 +237,7 @@ def undersample_majority_class(x_train, y_train, ratio):
     print('\nAfter Undersampling')
     print('Positive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
         str(len(x_train_balanced[y_train_balanced.values == -1])))
-    print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+    print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' +
         str(len(y_train_balanced[y_train_balanced.values == -1])))
 
     return x_train_balanced, y_train_balanced
@@ -193,7 +252,7 @@ def get_feature_importance(clf):
 # Saves an image representing one of the forest's decision trees
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
-    plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'], 
+    plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'],
         filled=True)
     fig.savefig('./figures/decision_tree.png')
     plt.close()
@@ -217,7 +276,7 @@ def main():
     parser = argparse.ArgumentParser(description='Random Forest Classifier')
     parser.add_argument('-t', dest='test', action='store_true', default=False, help='Generate Kaggle test set predictions')
     parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
-    
+
     args = parser.parse_args()
     clf = build_model()
 
