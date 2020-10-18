@@ -1,4 +1,5 @@
 import csv
+import argparse
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -175,9 +176,18 @@ def run_model(clf):
             pred_writer.writerow([int(loan_ids[i]), int(y_pred[i])])
 
 def main():
+    parser = argparse.ArgumentParser(description='Random Forest Classifier')
+    parser.add_argument('-t', dest='test', action='store_true', default=False, help='Generate Kaggle test set predictions')
+    parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
+    
+    args = parser.parse_args()
     clf = build_model()
-    #visualize_tree(clf)
-    #run_model(clf)
+
+    if args.vis_tree:
+        visualize_tree(clf)
+
+    if args.test:
+        run_model(clf)
 
 if __name__ == '__main__':
     main()

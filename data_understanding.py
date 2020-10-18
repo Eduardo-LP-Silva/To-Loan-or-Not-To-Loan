@@ -1,4 +1,5 @@
 import csv
+import argparse
 import operator
 import datetime
 import itertools
@@ -571,7 +572,11 @@ def plot_pie(sizes, labels, title):
     plt.close()
 
 def main():
-    analyse_data()
+    parser = argparse.ArgumentParser(description='Data Analysis')
+    parser.add_argument('-c', dest='clients', action='store_true', default=False, help='Analyse Clients')
+    args = parser.parse_args()
+
+    analyse_data(args.clients)
 
 if __name__ == '__main__':
     main()
