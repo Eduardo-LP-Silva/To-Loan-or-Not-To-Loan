@@ -102,7 +102,7 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
 
     y_pred = grid_search.predict(x_test)
 
-    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('Accuracy: %.1f' % (accuracy_score(y_test, y_pred) * 100) + '%')
     print('AUC Score: %.2f' % calc_auc(grid_search.best_estimator_, x_test, y_test))
 
 # Returns a model's AUC
