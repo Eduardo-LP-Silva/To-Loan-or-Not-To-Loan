@@ -1,16 +1,13 @@
 import csv
 import argparse
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.dummy import DummyClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
-from sklearn import metrics
-from sklearn import tree
 import matplotlib.pyplot as plt
 import data_preparation as dp
 import data_understanding as du
@@ -60,7 +57,10 @@ def eval_model(clf, x_train, y_train, x_test, y_test, y_pred):
 
     dummy_classifier(x_train, y_train, x_test, y_test)
 
-    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('Accuracy: %.1f' % (accuracy_score(y_test, y_pred) * 100) + '%')
+    print('Precision: %.1f' % (precision_score(y_test, y_pred) * 100) + '%')
+    print('Recall: %.1f' % (recall_score(y_test, y_pred) * 100) + '%')
+    print('F1: %.1f' % (f1_score(y_test, y_pred) * 100) + '%')
     print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
 
 # Train / Test Stratified Dataset Split 
@@ -112,10 +112,6 @@ def calc_auc(clf, x_test, y_test):
 
     return roc_auc_score(y_test, prob_y)
 
-# Returns a model's accuracy
-def calc_accuracy(y_test, y_pred):
-    return metrics.accuracy_score(y_test, y_pred)
-
 # Builds, trains and evaluates a dummy classifier
 def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy = DummyClassifier(strategy='most_frequent')
@@ -155,7 +151,7 @@ def get_feature_importance(clf):
 # Saves an image representing one of the forest's decision trees
 def visualize_tree(clf):
     fig = plt.figure(figsize=(100, 100))
-    tree.plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'], 
+    plot_tree(clf.estimators_[0], feature_names=list(dp.complete_data_row.keys()).copy()[1 : len(dp.complete_data_row.keys()) - 1], class_names=['0', '1'], 
         filled=True)
     fig.savefig('./figures/decision_tree.png')
     plt.close()
