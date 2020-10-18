@@ -29,10 +29,42 @@ def load_data(train):
         return data[header]
 
 # Builds the random forest model and calculates the accuracy and AUC score
-def build_model():
+def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=1, stratify=y)
+    x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
+    x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
+
+    print('\nTraining cases: ' + str(len(x_train_balanced)))
+    print('Test cases: ' + str(len(x_test)))
+
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
+        max_depth=None, n_estimators=500, random_state=42)
+    clf.fit(x_train_balanced, y_train_balanced)
+    y_pred = clf.predict(x_test)
+
+    eval_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
+
+    if hp_grid_search:
+        hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+
+    return clf
+
+# Evaluates a trained model given its training and test data sets, as well as its predictions
+def eval_model(clf, x_train, y_train, x_test, y_test, y_pred):
+    cm = confusion_matrix(y_test, y_pred)
+    du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
+
+    get_feature_importance(clf)
+
+    dummy_classifier(x_train, y_train, x_test, y_test)
+
+    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
+    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
+
+# Train / Test Stratified Dataset Split 
+def strat_train_test_split(x, y, test_size):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=1, stratify=y)
 
     negative_percent_train = (len(y_train[y_train.values == -1]) / len(y_train)) * 100
     negative_percent_test = (len(y_test[y_test.values == -1]) / len(y_test)) * 100
@@ -47,33 +79,9 @@ def build_model():
     print('\nTraining negative cases ratio: %.2f' % negative_percent_train + '%')
     print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
 
-    x_train_balanced, y_train_balanced = balance_train_dataset(x_train, y_train, 1)
+    return x_train, x_test, y_train, y_test
 
-    print('\nTraining cases: ' + str(len(x_train_balanced)))
-    print('Test cases: ' + str(len(x_test)))
-
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5, 
-        max_depth=None, n_estimators=500, random_state=42)
-    clf.fit(x_train_balanced, y_train_balanced)
-    y_pred = clf.predict(x_test)
-
-    cm = confusion_matrix(y_test, y_pred)
-    du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
-    
-    prob_y = clf.predict_proba(x_test)
-    prob_y = [p[1] for p in prob_y]
-
-    get_feature_importance(clf)
-
-    dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
-
-    print('Accuracy: %.1f' % (calc_accuracy(y_test, y_pred) * 100) + '%')
-    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
-
-    #hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
-
-    return clf
-
+# Executes a hyper parameter grid search on a Random Forest
 def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
     param_grid = {
         'max_features': ['sqrt', None],
@@ -88,7 +96,7 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
     grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, n_jobs=-1, verbose=1)
     grid_search.fit(x_train, y_train)
     
-    print('\n--- Best Params ---')
+    print('\n--- Hyper Parameter Grid Search Results ---')
     print(grid_search.best_params_)
 
     y_pred = grid_search.predict(x_test)
@@ -114,7 +122,7 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test) * 100) + '%')
 
 # Balances the training set given a ratio
-def balance_train_dataset(x_train, y_train, ratio):
+def undersample_majority_class(x_train, y_train, ratio):
     x_train_majority = x_train[y_train.values == 1]
     y_train_majority = y_train[y_train.values == 1]
 
@@ -168,8 +176,8 @@ def run_model(clf):
 
 def main():
     clf = build_model()
-    visualize_tree(clf)
-    run_model(clf)
+    #visualize_tree(clf)
+    #run_model(clf)
 
 if __name__ == '__main__':
     main()
