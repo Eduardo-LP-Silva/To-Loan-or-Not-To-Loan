@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 from datetime import date
+import statistics
 
 plt.rcParams['font.size'] = 8.0
 
@@ -375,6 +376,10 @@ def get_acc_last_transactions(transactions, date):
     prior_trans.sort(key=operator.attrgetter('date'), reverse=True)
 
     return prior_trans
+
+# Calculates standard deviation from an account transactions
+def get_sd_acc_transactions(transactions):
+    return statistics.pstdev(transactions['amount'])
 
 # Returns the transactions associated with an account
 def get_acc_transactions(transactions_df, acc_id):

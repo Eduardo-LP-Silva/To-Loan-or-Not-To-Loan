@@ -93,14 +93,14 @@ def arrange_complete_data(train, clean=False):
             fill_client_info(clients, acc_dispositions, acc_id, loan_date)
             fill_card_info(cards, cards_reader, acc_dispositions)
             fill_transaction_info(transactions, acc_id, loan_date)
-        
+
             if train:
                 complete_data_row['status'] = loan[6]
 
             # Hasn't started writing yet
             if complete_data_file.tell() == 0:
                 complete_data_writer.writerow(complete_data_row.keys())
-                
+
             complete_data_writer.writerow(complete_data_row.values())
 
 def fill_loan_info(loan):
@@ -125,7 +125,7 @@ def fill_district_info(district):
     complete_data_row["unemploymant rate '95"] = district["unemploymant rate '95 "]
     complete_data_row["unemploymant rate '96"] = district["unemploymant rate '96 "]
     complete_data_row['no. of enterpreneurs per 1000 inhabitants'] = district['no. of enterpreneurs per 1000 inhabitants ']
-    complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]    
+    complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
     complete_data_row["no. of commited crimes '96"] = district["no. of commited crimes '96 "]
 
 def fill_disposition_info(acc_dispositions):
@@ -150,6 +150,7 @@ def fill_transaction_info(transactions, acc_id, loan_date):
     acc_trans = du.get_acc_transactions(transactions, acc_id)
     last_trans = du.get_acc_last_transactions(acc_trans, ld)
 
+    sd_trans = du.get_sd_acc_transactions(acc_trans)
     negative_balance_no = len([trans for trans in last_trans if trans['balance'] <= 0])
     attrs = {
         'avg_balance': [trans['balance'] for trans in last_trans],
@@ -169,12 +170,34 @@ def fill_transaction_info(transactions, acc_id, loan_date):
         'avg_sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
         'avg_pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
     }
-    
+
+    len_attrs = {
+        'len_withdrawals': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal'],
+        'len_withdrawals_cash': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal in cash'],
+        'len_credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
+        'len_withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
+        'len_remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
+        'len_credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
+        'len_credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
+        'len_other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
+        'len_k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
+        'len_interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
+        'len_household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
+        'len_statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
+        'len_insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
+        'len_sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
+        'len_pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
+    }
+
     complete_data_row['last_balance'] = last_trans[0]['balance']
     complete_data_row['negative_balance_no'] = negative_balance_no
+    # complete_data_row['standard_deviation_transactions'] = sd_trans
 
     for key, value in attrs.items():
         complete_data_row[key] = np.mean(value) if len(value) > 0 else 0
+
+    # for key, value in len_attrs.items():
+    #     complete_data_row[key] = len(value) if len(value) > 0 else 0
 
 # One hot encodes a single data piece given the possible set of labels
 def one_hot_encode(labels, data):
