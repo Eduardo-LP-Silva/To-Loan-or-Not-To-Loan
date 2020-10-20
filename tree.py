@@ -26,6 +26,8 @@ def load_data(train):
         x = data[feature_cols]
         y = data.status
 
+        x = dp.remove_correlated_attributes(x)
+
         return x, y
     else:
         return data[header]
@@ -89,7 +91,7 @@ def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
 
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=2, min_samples_leaf=5,
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=5, min_samples_leaf=2,
         max_depth=None, n_estimators=500, random_state=42)
     clf_original = clone(clf)
 
@@ -164,7 +166,7 @@ def strat_train_test_split(x, y, test_size):
 # Executes a hyper parameter grid search on a Random Forest
 def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
     param_grid = {
-        'max_features': ['sqrt', None],
+        'max_features': ['sqrt', None, 'log2'],
         'min_samples_leaf': [2, 5, 10],
         'min_samples_split': [2, 5, 10],
         'n_estimators': [300, 500, 900],

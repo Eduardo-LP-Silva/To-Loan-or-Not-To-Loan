@@ -103,6 +103,28 @@ def arrange_complete_data(train, clean=False):
 
             complete_data_writer.writerow(complete_data_row.values())
 
+def remove_correlated_attributes(x, thresh=0.8):
+    corr_mat = x.corr()
+    corr_feats = set()
+    print('\n--- Correlated Features ---')
+
+    for i in range(len(corr_mat.columns)):
+        for j in range(i):
+            corr_val = corr_mat.iloc[i, j]
+            col_name = corr_mat.columns[i]
+
+            if abs(corr_val) > thresh:
+                corr_feats.add(col_name)
+
+                if col_name in complete_data_row:
+                    complete_data_row.pop(col_name)
+
+                print('%s & %s: %.2f' % (col_name, corr_mat.columns[j], corr_val))
+
+    du.plot_correlation_matrix(corr_mat)
+
+    return x.drop(labels=corr_feats, axis=1)
+
 def fill_loan_info(loan):
     complete_data_row['loan_id'] = loan[0]
     complete_data_row['amount'] = loan[3]
@@ -152,52 +174,34 @@ def fill_transaction_info(transactions, acc_id, loan_date):
 
     sd_trans = du.get_sd_acc_transactions(acc_trans)
     negative_balance_no = len([trans for trans in last_trans if trans['balance'] <= 0])
+
     attrs = {
-        'avg_balance': [trans['balance'] for trans in last_trans],
-        'avg_withdrawals': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal'],
-        'avg_withdrawals_cash': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal in cash'],
-        'avg_credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
-        'avg_withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
-        'avg_remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
-        'avg_credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
-        'avg_credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
-        'avg_other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
-        'avg_k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
-        'avg_interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
-        'avg_household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
-        'avg_statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
-        'avg_insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
-        'avg_sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
-        'avg_pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
+        'balance': [trans['balance'] for trans in last_trans],
+        'withdrawals': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal'],
+        'withdrawals_cash': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal in cash'],
+        'credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
+        'withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
+        'remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
+        'credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
+        'credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
+        'other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
+        'k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
+        'interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
+        'household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
+        'statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
+        'insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
+        'sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
+        'pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
     }
 
-    len_attrs = {
-        'len_withdrawals': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal'],
-        'len_withdrawals_cash': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal in cash'],
-        'len_credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
-        'len_withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
-        'len_remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
-        'len_credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
-        'len_credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
-        'len_other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
-        'len_k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
-        'len_interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
-        'len_household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
-        'len_statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
-        'len_insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
-        'len_sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
-        'len_pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
-    }
-
+    complete_data_row['transaction_no'] = len(acc_trans)
     complete_data_row['last_balance'] = last_trans[0]['balance']
     complete_data_row['negative_balance_no'] = negative_balance_no
-    # complete_data_row['standard_deviation_transactions'] = sd_trans
+    #complete_data_row['standard_deviation_transactions'] = sd_trans
 
     for key, value in attrs.items():
-        complete_data_row[key] = np.mean(value) if len(value) > 0 else 0
-
-    # for key, value in len_attrs.items():
-    #     complete_data_row[key] = len(value) if len(value) > 0 else 0
+        complete_data_row['avg_' + key] = np.mean(value) if len(value) > 0 else 0
+        #complete_data_row[key + '_no'] = len(value)
 
 # One hot encodes a single data piece given the possible set of labels
 def one_hot_encode(labels, data):

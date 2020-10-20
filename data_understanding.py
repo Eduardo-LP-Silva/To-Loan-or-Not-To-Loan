@@ -5,6 +5,7 @@ import datetime
 import itertools
 import pandas as pd
 import numpy as np
+import seaborn as sn
 import matplotlib.pyplot as plt
 import datetime
 from datetime import date
@@ -377,9 +378,13 @@ def get_acc_last_transactions(transactions, date):
 
     return prior_trans
 
-# Calculates standard deviation from an account transactions
+# Calculates standard deviation for an account's transactions amount
 def get_sd_acc_transactions(transactions):
     return statistics.pstdev(transactions['amount'])
+
+# Calculates standard deviation for an account's balance
+def get_sd_acc_balance(transactions):
+    return statistics.pstdev(transactions['balance'])
 
 # Returns the transactions associated with an account
 def get_acc_transactions(transactions_df, acc_id):
@@ -523,6 +528,14 @@ def get_district(districts, dist_id):
 # Returns an account given an account id
 def get_account(accounts, acc_id):
     return accounts[accounts['account_id'] == acc_id].iloc[0]
+
+# Plots a heatmap corresponding to a correlation matrix
+def plot_correlation_matrix(corr_mat):
+    fig = plt.figure(figsize=(50, 50))
+    sn.heatmap(corr_mat, annot=True)
+    #plt.show()
+    plt.savefig('./figures/correlation_matrix.png')
+    plt.close()
 
 # Plots a confusion matrix
 def plot_confusion_matrix(cm, classes, title):
