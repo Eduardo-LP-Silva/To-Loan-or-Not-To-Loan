@@ -123,7 +123,7 @@ def remove_correlated_attributes(x, thresh=0.8):
 
     du.plot_correlation_matrix(corr_mat)
 
-    return x.drop(labels=corr_feats, axis=1)
+    return x.drop(labels=corr_feats, axis=1), corr_feats
 
 def fill_loan_info(loan):
     complete_data_row['loan_id'] = loan[0]
