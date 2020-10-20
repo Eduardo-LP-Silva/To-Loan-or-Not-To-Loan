@@ -84,7 +84,6 @@ def date_split():
 
     return x_train, y_train, x_test, y_test
 
-
 # Builds the random forest model and calculates the accuracy and AUC score
 def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
@@ -99,17 +98,15 @@ def build_model(hp_grid_search=False):
     # x_train, y_train, x_test, y_test = date_split()
 
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
-    #x_train_balanced, y_train_balanced = undersample_majority_class(x_train, y_train, 1)
-    x_train_balanced, y_train_balanced = smote_and_undersample(x_train, y_train, 0.5, 10)
+    x_train_balanced, y_train_balanced = smote_and_undersample(x_train, y_train, 0.5, 3)
 
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
-
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
-    evaluate_model_kfold(clf_original, x_train_balanced, y_train_balanced)
+    evaluate_model_kfold(clf_original, x_train_balanced, y_train_balanced, 10)
     
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
@@ -117,8 +114,8 @@ def build_model(hp_grid_search=False):
     return clf
 
 # Evaluates a (untrained) model with repeated stratified k-folds
-def evaluate_model_kfold(clf, x, y):
-    cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=42)
+def evaluate_model_kfold(clf, x, y, k=5):
+    cv = RepeatedStratifiedKFold(n_splits=k, n_repeats=3, random_state=42)
 
     scores = cross_validate(clf, x, y, scoring=['roc_auc'], cv=cv,
         n_jobs=-1)
@@ -276,9 +273,9 @@ def main():
     parser = argparse.ArgumentParser(description='Random Forest Classifier')
     parser.add_argument('-t', dest='test', action='store_true', default=False, help='Generate Kaggle test set predictions')
     parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
-
+    parser.add_argument('-g', dest='grid_search', action='store_true', default=False, help='Perform hyper-parameter grid search')
     args = parser.parse_args()
-    clf = build_model()
+    clf = build_model(args.grid_search)
 
     if args.vis_tree:
         visualize_tree(clf)
