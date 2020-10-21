@@ -116,7 +116,7 @@ def build_model(hp_grid_search=False):
     y_pred = clf.predict(x_test)
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
     evaluate_model_kfold(clf_original, x_train, y_train, 10)
-    
+
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
@@ -222,16 +222,18 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
 
 def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
-    sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
-    x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
-    y_counter = Counter(y_upsampled)
+    # sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
+    # x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
+    # y_counter = Counter(y_upsampled)
 
-    print('\nAfter SMOTE (1/2)')
-    print('Positive, Negative training Y: %s' % y_counter)
+    # print('\nAfter SMOTE (1/2)')
+    # print('Positive, Negative training Y: %s' % y_counter)
 
-    rus = RandomUnderSampler(sampling_strategy=1, random_state=42)
+    rus = RandomUnderSampler(sampling_strategy=0.6, random_state=42)
 
-    x_undersampled, y_undersampled = rus.fit_resample(x_upsampled, y_upsampled)
+    x_undersampled, y_undersampled = rus.fit_resample(x_train, y_train)
+
+    # x_undersampled, y_undersampled = rus.fit_resample(x_upsampled, y_upsampled)
     y_counter = Counter(y_undersampled)
 
     print('After Undersampling (2/2)')
