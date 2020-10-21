@@ -10,11 +10,14 @@ from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
-from imblearn.over_sampling import SMOTE
+from imblearn.over_sampling import SMOTE, BorderlineSMOTE
 from imblearn.under_sampling import RandomUnderSampler
 import matplotlib.pyplot as plt
 import data_preparation as dp
 import data_understanding as du
+
+# Set holding the correlated features removed during training
+corr_feats = set()
 
 # Loads data from complete_data.csv and returns it in the form of a pandas data frame, depending on the mode (train or test)
 def load_data(train):
@@ -26,11 +29,12 @@ def load_data(train):
         x = data[feature_cols]
         y = data.status
 
-        x = dp.remove_correlated_attributes(x)
+        global corr_feats
+        x, corr_feats = dp.remove_correlated_attributes(x)
 
         return x, y
     else:
-        return data[header]
+        return data[header].drop(labels=corr_feats, axis=1)
 
 # Loads data from complete_data.csv and returns it in the form of a pandas data frame with loan_ids
 def load_loan_data():
@@ -91,8 +95,9 @@ def build_model(hp_grid_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
 
+    # Best Weights: {-1: 1, 1: 7}
     clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=5, min_samples_leaf=2,
-        max_depth=None, n_estimators=500, random_state=42)
+        max_depth=None, n_estimators=500, class_weight={-1: 1, 1: 7}, random_state=42)
     clf_original = clone(clf)
 
     # clf = hyper_parameter_randomized_search()
@@ -110,8 +115,8 @@ def build_model(hp_grid_search=False):
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
-    # evaluate_model_kfold(clf_original, x_train_balanced, y_train_balanced, 10)
-
+    evaluate_model_kfold(clf_original, x_train, y_train, 10)
+    
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
@@ -217,7 +222,7 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
 
 def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
-    sm = SMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
+    sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
     x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
     y_counter = Counter(y_upsampled)
 
