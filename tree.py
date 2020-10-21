@@ -229,7 +229,7 @@ def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
     # print('\nAfter SMOTE (1/2)')
     # print('Positive, Negative training Y: %s' % y_counter)
 
-    rus = RandomUnderSampler(sampling_strategy=0.6, random_state=42)
+    rus = RandomUnderSampler(sampling_strategy=0.8, random_state=42)
 
     x_undersampled, y_undersampled = rus.fit_resample(x_train, y_train)
 
