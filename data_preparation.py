@@ -197,7 +197,7 @@ def fill_transaction_info(transactions, acc_id, loan_date):
     complete_data_row['transaction_no'] = len(acc_trans)
     complete_data_row['last_balance'] = last_trans[0]['balance']
     complete_data_row['negative_balance_no'] = negative_balance_no
-    #complete_data_row['standard_deviation_transactions'] = sd_trans
+    complete_data_row['standard_deviation_transactions'] = sd_trans
 
     for key, value in attrs.items():
         complete_data_row['avg_' + key] = np.mean(value) if len(value) > 0 else 0

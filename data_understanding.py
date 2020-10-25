@@ -178,15 +178,17 @@ def analyse_accounts(detailed):
         acc_reader = csv.reader(accounts, delimiter=';')
         dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
         freqs = {'Monthly': 0, 'Weekly': 0, 'After Transaction': 0}
+        loans_reader = None
+        cards_reader = None
+        disp_nos = {}
+        acc_owner_card = {'none': 0, 'junior': 0, 'classic': 0, 'gold': 0}
+        acc_cards_no = {}
+        acc_loan_no = {}
 
         if detailed:
             loans_reader = csv.reader(loans, delimiter=';')
             cards_reader = csv.reader(cards, delimiter=';')
-            disp_nos = {}
-            acc_owner_card = {'none': 0, 'junior': 0, 'classic': 0, 'gold': 0}
-            acc_cards_no = {}
-            acc_loan_no = {}
-
+            
         next(acc_reader)
 
         for account in acc_reader:
@@ -303,6 +305,7 @@ def calc_missing_values():
 
         missing_vals_count = {'missing_districts': 0, 'missing_loans': 0, 'missing_dispositions': 0,
             'missing_accounts': 0}
+        missing_vals = {}
 
         for row in loans_reader:
             if len(row) == 7:
