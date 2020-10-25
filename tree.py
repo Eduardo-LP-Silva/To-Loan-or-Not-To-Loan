@@ -6,7 +6,7 @@ from collections import Counter
 from sklearn.base import clone
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import GridSearchCV, train_test_split, cross_validate, RepeatedStratifiedKFold
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test_split, cross_validate, RepeatedStratifiedKFold
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
@@ -100,6 +100,8 @@ def build_model(hp_grid_search=False):
         max_depth=None, n_estimators=500, class_weight={-1: 1, 1: 7}, random_state=42)
     clf_original = clone(clf)
 
+    # clf = hyper_parameter_randomized_search()
+
     # data = load_loan_data()
     # rewrite_loans(data, [95], [96])
     # x_train, y_train, x_test, y_test = date_split()
@@ -114,7 +116,7 @@ def build_model(hp_grid_search=False):
     y_pred = clf.predict(x_test)
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
     evaluate_model_kfold(clf_original, x_train, y_train, 10)
-    
+
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
 
@@ -138,7 +140,7 @@ def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     cm = confusion_matrix(y_test, y_pred)
     du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
 
-    get_feature_importance(clf)
+    # get_feature_importance(clf)
     dummy_classifier(x_train, y_train, x_test, y_test)
 
     print('\n--- Fitted Model Performance ---')
@@ -167,6 +169,21 @@ def strat_train_test_split(x, y, test_size):
     print('Test negative cases ratio: %.2f' % negative_percent_test + '%')
 
     return x_train, x_test, y_train, y_test
+
+# Executes a hyper parameter randomized search on a Random Forest
+def hyper_parameter_randomized_search():
+    param_grid = {
+        'max_features': ['sqrt', None, 'log2'],
+        'min_samples_leaf': [2, 5, 10],
+        'min_samples_split': [2, 5, 10],
+        'n_estimators': [300, 500, 900],
+        'criterion': ['gini', 'entropy']
+    }
+
+    clf = RandomForestClassifier(max_features=None, max_depth=None, random_state=42)
+    randomized_search = RandomizedSearchCV(estimator = clf, param_distributions = param_grid, n_iter = 100, cv = 3, verbose=2, random_state=42, n_jobs = -1)
+
+    return randomized_search
 
 # Executes a hyper parameter grid search on a Random Forest
 def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
@@ -205,16 +222,18 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
 
 def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
-    sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
-    x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
-    y_counter = Counter(y_upsampled)
+    # sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
+    # x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
+    # y_counter = Counter(y_upsampled)
 
-    print('\nAfter SMOTE (1/2)')
-    print('Positive, Negative training Y: %s' % y_counter)
+    # print('\nAfter SMOTE (1/2)')
+    # print('Positive, Negative training Y: %s' % y_counter)
 
-    rus = RandomUnderSampler(sampling_strategy=1, random_state=42)
+    rus = RandomUnderSampler(sampling_strategy=0.8, random_state=42)
 
-    x_undersampled, y_undersampled = rus.fit_resample(x_upsampled, y_upsampled)
+    x_undersampled, y_undersampled = rus.fit_resample(x_train, y_train)
+
+    # x_undersampled, y_undersampled = rus.fit_resample(x_upsampled, y_upsampled)
     y_counter = Counter(y_undersampled)
 
     print('After Undersampling (2/2)')
@@ -239,7 +258,7 @@ def undersample_majority_class(x_train, y_train, ratio):
     y_train_balanced = pd.concat([y_train_majority_downsampled, y_train_minority])
 
     print('\nAfter Undersampling')
-    print('Positive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' + 
+    print('Positive | Negative training X: ' + str(len(x_train_balanced[y_train_balanced.values == 1])) + ' | ' +
         str(len(x_train_balanced[y_train_balanced.values == -1])))
     print('Positive | Negative training Y: ' + str(len(y_train_balanced[y_train_balanced.values == 1])) + ' | ' +
         str(len(y_train_balanced[y_train_balanced.values == -1])))
