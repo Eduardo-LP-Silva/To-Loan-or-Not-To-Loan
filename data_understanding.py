@@ -336,27 +336,31 @@ def calc_missing_values():
             print(key + ': ' + str(missing_vals_count[key]))
         print('\n')
 
-'''
-def get_income(acc_transactions):
-    acc_transactions.sort(key=operator.attrgetter('date'))
-    monthly_incomes = [0]
-    i = 0
-    previous_date = parse_date(str(acc_transactions[0]['date'])) if len(acc_transactions) > 0 else None
 
-    for trans in acc_transactions:
-        if trans['type'] == 'credit':
+def calc_avg_monthly_income(acc_transactions):
+    acc_transactions = acc_transactions.sort_values(by=['date'])
+    monthly_balances = [[0]]
+    i = 0
+    previous_date = parse_date(str(acc_transactions.iloc[0]['date'])) if len(acc_transactions) > 0 else None
+
+    for _, trans in acc_transactions.iterrows():
+
+        if trans['type'] == 'credit' or trans['operation'] == 'credit in cash' or trans['operation'] == 'collection from another bank' or trans['k_symbol'] == 'old-age pension':
             date = parse_date(str(trans['date']))
 
-            if date[0] != previous_date[0]:
-                monthly_incomes.append(trans['amount'])
+            if date[0] != previous_date[0] or date[1] != previous_date[1]:
+                monthly_balances[i] = np.mean(np.array(monthly_balances[i]))
+                monthly_balances.append([trans['balance']])
                 i += 1
             else:
-                monthly_incomes[i] += trans['amount']
+                monthly_balances[i].append(trans['balance'])
 
             previous_date = date
 
-    return sum(monthly_incomes) / len(monthly_incomes)
-'''
+    if type(monthly_balances[i]) == list:
+        monthly_balances[i] = np.mean(np.array(monthly_balances[i]))
+
+    return sum(monthly_balances) / len(monthly_balances)
 
 # Parses a YYMMDD date to tuple format
 def parse_date(date):

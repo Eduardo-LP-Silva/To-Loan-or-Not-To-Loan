@@ -96,7 +96,7 @@ def build_model(hp_grid_search=False):
     x, y = load_data(True)
 
     # Best Weights: {-1: 1, 1: 7}
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=5, min_samples_leaf=2,
+    clf = RandomForestClassifier(max_features='log2', criterion='gini', min_samples_split=5, min_samples_leaf=2,
         max_depth=None, n_estimators=500, class_weight={-1: 1, 1: 7}, random_state=42)
     clf_original = clone(clf)
 
@@ -140,7 +140,7 @@ def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     cm = confusion_matrix(y_test, y_pred)
     du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
 
-    # get_feature_importance(clf)
+    get_feature_importance(clf)
     dummy_classifier(x_train, y_train, x_test, y_test)
 
     print('\n--- Fitted Model Performance ---')

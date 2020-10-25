@@ -120,6 +120,7 @@ def remove_correlated_attributes(x, thresh=0.8):
                     complete_data_row.pop(col_name)
 
                 print('%s & %s: %.2f' % (col_name, corr_mat.columns[j], corr_val))
+                break
 
     du.plot_correlation_matrix(corr_mat)
 
@@ -133,7 +134,7 @@ def fill_loan_info(loan):
 
 def fill_account_info(account, loan_date):
     ld = du.parse_date(loan_date)
-    complete_data_row['account_age'] = ld[0] - du.parse_date(str(account['date']))[0]
+    #complete_data_row['account_age'] = ld[0] - du.parse_date(str(account['date']))[0]
 
 def fill_district_info(district):
     complete_data_row['no. of inhabitants'] = district['no. of inhabitants']
@@ -151,21 +152,23 @@ def fill_district_info(district):
     complete_data_row["no. of commited crimes '96"] = district["no. of commited crimes '96 "]
 
 def fill_disposition_info(acc_dispositions):
-    complete_data_row['disposition_no'] = len(acc_dispositions)
+    #complete_data_row['disposition_no'] = len(acc_dispositions)
+    pass
 
 def fill_client_info(clients, acc_dispositions, acc_id, loan_date):
     owner = du.get_acc_owner(acc_id, acc_dispositions, clients)
     loan_owner_age = du.calculate_loan_client_age(str(owner['birth_number']), loan_date)
 
     complete_data_row['age'] = loan_owner_age
-    complete_data_row['gender'] = owner['gender']
+    #complete_data_row['gender'] = owner['gender']
 
 def fill_card_info(cards, cards_reader, acc_dispositions):
     card_types = du.get_card_types_no(cards, cards_reader, acc_dispositions)
-
+    '''
     complete_data_row['junior_card_no'] = card_types[0]
     complete_data_row['classic_card_no'] = card_types[1]
     complete_data_row['gold_card_no'] = card_types[2]
+    '''
 
 def fill_transaction_info(transactions, acc_id, loan_date):
     ld = du.parse_date(loan_date)
@@ -182,22 +185,23 @@ def fill_transaction_info(transactions, acc_id, loan_date):
         'credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
         'withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
         'remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
-        'credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
+        #'credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
         'credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
         'other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
         'k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
         'interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
         'household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
         'statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
-        'insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
+        #'insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
         'sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
-        'pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
+        #'pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
     }
 
     complete_data_row['transaction_no'] = len(acc_trans)
     complete_data_row['last_balance'] = last_trans[0]['balance']
     complete_data_row['negative_balance_no'] = negative_balance_no
-    complete_data_row['standard_deviation_transactions'] = sd_trans
+    #complete_data_row['standard_deviation_transactions'] = sd_trans
+    complete_data_row['avg_monthly_income'] = du.calc_avg_monthly_income(acc_trans)
 
     for key, value in attrs.items():
         complete_data_row['avg_' + key] = np.mean(value) if len(value) > 0 else 0
