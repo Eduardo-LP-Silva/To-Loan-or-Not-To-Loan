@@ -287,10 +287,11 @@ def run_model(clf):
         x = load_data(False)
         loan_ids = x['loan_id'].copy()
         x.drop(['loan_id'], axis=1, inplace=True)
-        y_pred = clf.predict(x)
+        #y_pred = clf.predict(x)
+        y_prob = clf.predict_proba(x)
 
         for i, row in x.iterrows():
-            pred_writer.writerow([int(loan_ids[i]), int(y_pred[i])])
+            pred_writer.writerow([int(loan_ids[i]), y_prob[i][1]])
 
 def main():
     parser = argparse.ArgumentParser(description='Random Forest Classifier')
