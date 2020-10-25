@@ -115,7 +115,7 @@ def build_model(hp_grid_search=False):
     clf.fit(x_train_balanced, y_train_balanced)
     y_pred = clf.predict(x_test)
     eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
-    evaluate_model_kfold(clf_original, x_train, y_train, 10)
+    evaluate_model_kfold(clf_original, x_train_balanced, y_train_balanced, 10)
 
     if hp_grid_search:
         hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
@@ -133,7 +133,7 @@ def evaluate_model_kfold(clf, x, y, k=5):
 
     for key, vals in scores.items():
         if key.startswith('test_'):
-            print('%s: %.2f' % (key, np.mean(vals)))
+            print('%s: %.5f' % (key, np.mean(vals)))
 
 # Evaluates a trained model given its training and test data sets, as well as its predictions
 def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
@@ -148,7 +148,7 @@ def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     print('Precision: %.2f' % (precision_score(y_test, y_pred)))
     print('Recall: %.2f' % (recall_score(y_test, y_pred)))
     print('F1: %.2f' % (f1_score(y_test, y_pred)))
-    print('AUC Score: %.2f' % calc_auc(clf, x_test, y_test))
+    print('AUC Score: %.5f' % calc_auc(clf, x_test, y_test))
 
 # Train / Test Stratified Dataset Split
 def strat_train_test_split(x, y, test_size):
