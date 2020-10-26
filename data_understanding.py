@@ -36,23 +36,26 @@ def analyse_data(clients=False, detailed=False):
 # Analyses the transactions csv and produces related statistics and metrics
 def analyse_transactions():
     transactions = pd.read_csv('./files/trans_train.csv', sep=';', header=0, index_col=False, low_memory=False)
-    accounts = pd.read_csv('./files/trans_train.csv', sep=';', header=0, index_col=False, low_memory=False)
     transactions['operation'].fillna('Missing', inplace=True)
     transactions['k_symbol'].replace('^\s+$', 'Missing', regex=True, inplace=True)
     transactions['k_symbol'].fillna('Missing', inplace=True)
     trans_attrs = {'amount': transactions['amount'].tolist(), 'balance': transactions['balance'].tolist()}
 
+    trans_missing_op = transactions[transactions['operation'] == 'Missing']
+    trans_missing_k = transactions[transactions['k_symbol'] == 'Missing']
+    trans_household_k = transactions[transactions['k_symbol'] == 'household']
+
     plot_stacked_bar(transactions['type'], 'Transaction Types')
     plot_stacked_bar(transactions['operation'], 'Transaction Operations')
     plot_stacked_bar(transactions['k_symbol'], 'Transaction K Symbols')
-    plot_stacked_bar(transactions[transactions['operation'] == 'Missing']['type'], 'Transaction Missing Operation Types')
-    plot_stacked_bar(transactions[transactions['k_symbol'] == 'Missing']['type'], 'Transaction Missing K Types')
-    plot_stacked_bar(transactions[transactions['operation'] == 'Missing']['k_symbol'], 'Transaction Missing Operation K Symbols')
+    plot_stacked_bar(trans_missing_op['type'], 'Transaction Missing Operation Types')
+    plot_stacked_bar(trans_missing_op['k_symbol'], 'Transaction Missing Operation K Symbols')
+    plot_stacked_bar(trans_missing_k['type'], 'Transaction Missing K Types')
+    plot_stacked_bar(trans_missing_k['operation'], 'Transaction Missing K Operations')
     plot_stacked_bar(transactions[transactions['k_symbol'] == 'interest credited']['operation'], 'Transaction Interest K Operations')
-    plot_stacked_bar(transactions[transactions['k_symbol'] == 'Missing']['operation'], 'Transaction Missing K Operations')
     plot_stacked_bar(transactions[transactions['operation'] == 'withdrawal in cash']['type'], 'Transaction Withdrawal in Cash Operation Types')
-    plot_stacked_bar(transactions[transactions['k_symbol'] == 'household']['type'], 'Transaction Household K Types')
-    plot_stacked_bar(transactions[transactions['k_symbol'] == 'household']['operation'], 'Transaction Household K Operations')
+    plot_stacked_bar(trans_household_k['type'], 'Transaction Household K Types')
+    plot_stacked_bar(trans_household_k['operation'], 'Transaction Household K Operations')
     plot_box(trans_attrs, 'Transaction')
 
     attr_data['trans_op_mode'] = transactions['operation'].value_counts().idxmax()
@@ -194,10 +197,17 @@ def analyse_loans():
     age_dist_series = pd.DataFrame(columns=age_dist.keys())
     age_dist_series.loc[0] = age_dist.values()
 
+    total_loans = attr_data['loan_status_appr'] + attr_data['loan_status_rej']
+    suc_loan_percent = attr_data['loan_status_appr'] / total_loans * 100
+    unsuc_loan_percent = attr_data['loan_status_rej'] / total_loans * 100
+
+    loan_status = pd.DataFrame(columns=['Successful', 'Unsuccessful'])
+    loan_status.loc[0] = [suc_loan_percent, unsuc_loan_percent]
+
     plot_stacked_bar(status_disp[['1', '2']], 'Disposition No. & Status', single_col=False, count_values=False, 
         double_precision=False)
     plot_stacked_bar(age_dist_series, 'Clients Age at Loan Request', count_values=False, double_precision=False)
-    plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
+    plot_stacked_bar(loan_status, 'Loan Status', count_values=False)
     plot_box(attrs, 'Loans')
 
 # Calculates (necessary) missing and / or not loan linked values
