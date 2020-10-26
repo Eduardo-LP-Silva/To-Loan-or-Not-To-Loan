@@ -3,6 +3,8 @@ import argparse
 import operator
 import datetime
 import itertools
+from matplotlib.pyplot import axis
+from numpy.core.defchararray import count
 import pandas as pd
 import numpy as np
 import seaborn as sn
@@ -17,10 +19,10 @@ plt.rcParams['font.size'] = 8.0
 attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'trans_op_mode': '', 'trans_k_mode': ''}
 
 # Analyses csv's data and produces respective statistics
-def analyse_data(clients=False):
+def analyse_data(clients=False, detailed=False):
     calc_missing_values()
     analyse_loans()
-    analyse_accounts(False)
+    analyse_accounts(detailed)
     analyse_cards()
     analyse_dispositions()
     analyse_districts()
@@ -33,79 +35,38 @@ def analyse_data(clients=False):
 
 # Analyses the transactions csv and produces related statistics and metrics
 def analyse_transactions():
-    with open('./files/trans_train.csv') as transactions:
-        trans_reader = csv.reader(transactions, delimiter=';')
-        trans_types = {}
-        trans_operations = {}
-        trans_ks = {}
-        trans_attrs = {'amount': [], 'balance': []}
+    transactions = pd.read_csv('./files/trans_train.csv', sep=';', header=0, index_col=False, low_memory=False)
+    accounts = pd.read_csv('./files/trans_train.csv', sep=';', header=0, index_col=False, low_memory=False)
+    transactions['operation'].fillna('Missing', inplace=True)
+    transactions['k_symbol'].replace('^\s+$', 'Missing', regex=True, inplace=True)
+    transactions['k_symbol'].fillna('Missing', inplace=True)
+    trans_attrs = {'amount': transactions['amount'].tolist(), 'balance': transactions['balance'].tolist()}
 
-        next(trans_reader)
+    plot_stacked_bar(transactions['type'], 'Transaction Types')
+    plot_stacked_bar(transactions['operation'], 'Transaction Operations')
+    plot_stacked_bar(transactions['k_symbol'], 'Transaction K Symbols')
+    plot_stacked_bar(transactions[transactions['operation'] == 'Missing']['type'], 'Transaction Missing Operation Types')
+    plot_stacked_bar(transactions[transactions['k_symbol'] == 'Missing']['type'], 'Transaction Missing K Types')
+    plot_stacked_bar(transactions[transactions['operation'] == 'Missing']['k_symbol'], 'Transaction Missing Operation K Symbols')
+    plot_stacked_bar(transactions[transactions['k_symbol'] == 'interest credited']['operation'], 'Transaction Interest K Operations')
+    plot_stacked_bar(transactions[transactions['k_symbol'] == 'Missing']['operation'], 'Transaction Missing K Operations')
+    plot_box(trans_attrs, 'Transaction')
 
-        for trans in trans_reader:
-            if len(trans) == 10:
-                if trans[3] in trans_types:
-                    trans_types[trans[3]] += 1
-                else:
-                    trans_types[trans[3]] = 0
-
-                trans_op = 'Missing' if not trans[4] or trans[4].isspace() else trans[4]
-
-                if trans_op in trans_operations:
-                    trans_operations[trans_op] += 1
-                else:
-                    trans_operations[trans_op] = 0
-
-                trans_k = 'Missing' if not trans[7] or trans[7].isspace() else trans[7]
-
-                if trans_k in trans_ks:
-                    trans_ks[trans_k] += 1
-                else:
-                    trans_ks[trans_k] = 0
-
-                trans_attrs['amount'].append(float(trans[5]))
-                trans_attrs['balance'].append(float(trans[6]))
-
-        plot_pie(trans_types.values(), trans_types.keys(), 'Transaction Types')
-        plot_pie(trans_operations.values(), trans_operations.keys(), 'Transaction Operations')
-        plot_pie(trans_ks.values(), trans_ks.keys(), 'Transaction K Symbols')
-        plot_box(trans_attrs, 'Transaction')
-
-        trans_operations.pop('Missing')
-        trans_ks.pop('Missing')
-        attr_data['trans_op_mode'] = max(trans_operations.items(), key=operator.itemgetter(1))[0]
-        attr_data['trans_k_mode'] = max(trans_ks.items(), key=operator.itemgetter(1))[0]
+    attr_data['trans_op_mode'] = transactions['operation'].value_counts().idxmax()
+    attr_data['trans_k_mode'] = transactions['k_symbol'].value_counts().idxmax()
 
 # Analyses the clients csv and produces the number of accounts per client plot
 def analyse_clients():
-    with open('./files/client.csv') as clients, open('./files/disp.csv') as dispositions, open('./files/account.csv') as accounts:
-        clients_reader = csv.reader(clients, delimiter=';')
-        disp_reader = csv.reader(dispositions, delimiter=';')
-        acc_reader = csv.reader(accounts, delimiter=';')
-        client_account_no = {}
-        gender_list = {'male': 0, 'female': 0}
+    clients = pd.read_csv('./files/client.csv', sep=';', header=0, index_col=False)
+    dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
+    accounts = pd.read_csv('./files/account.csv', sep=';', header=0, index_col=False)
 
-        next(clients_reader)
+    genders = pd.Series([get_client_gender(str(birthdate)) for birthdate in clients['birth_number'].values])
+    client_account_no = pd.Series([len(get_client_accounts(client_id, dispositions, accounts)) 
+        for client_id in clients['client_id'].values])
 
-        for client in clients_reader:
-            if len(client) == 3:
-                client_accs = len(get_client_accounts(int(client[0]), dispositions, disp_reader, accounts, acc_reader))
-                # TODO
-                # client_age = get_client_age(client[1])
-                client_gender = get_client_gender(client[1])
-                if client_gender == 0:
-                    gender_list['male'] += 1
-                else:
-                    gender_list['female'] += 1
-
-                if client_accs in client_account_no:
-                    client_account_no[client_accs] += 1
-                else:
-                    client_account_no[client_accs] = 1
-
-        plot_pie(client_account_no.values(), client_account_no.keys(), 'Accounts per Client')
-        plot_pie(gender_list.values(), gender_list.keys(), 'Clients Gender')
-
+    plot_stacked_bar(genders, 'Clients Gender', rename_cols={0: 'Male', 1: 'Female'})
+    plot_stacked_bar(client_account_no, 'Accounts per Client')
 
 # Analyses districts csv and produces box charts for each relevant attribute
 def analyse_districts():
@@ -148,94 +109,37 @@ def analyse_districts():
 
 # Analyses dispositions csv and produces disposition type pie chart
 def analyse_dispositions():
-    with open('./files/disp.csv') as dispositions:
-        disp_reader = csv.reader(dispositions, delimiter=';')
-        disp_type = {'owner': 0, 'disponent': 0}
-        next(disp_reader)
-
-        for disp in disp_reader:
-            if len(disp) == 4:
-                disp_type[disp[3].lower()] += 1
-
-        plot_pie(disp_type.values(), disp_type.keys(), 'Disposition')
+    dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
+    plot_stacked_bar(dispositions['type'], 'Disposition Types')
 
 # Analyses training cards csv and produces card type pie chart
 def analyse_cards():
-    with open('./files/card_train.csv') as cards:
-        card_reader = csv.reader(cards, delimiter=';')
-        card_types = {'classic': 0, 'junior': 0, 'gold': 0}
-        next(card_reader)
-
-        for card in card_reader:
-            if len(card) == 4:
-                card_types[card[2]] += 1
-
-        plot_pie(card_types.values(), card_types.keys(), 'Card Type')
+    cards = pd.read_csv('./files/card_train.csv', sep=';', header=0, index_col=False)
+    plot_stacked_bar(cards['type'], 'Card Type')
 
 # Analyses accounts csv and produces various statistics regarding them
 def analyse_accounts(detailed):
-    with open('./files/account.csv') as accounts, open('./files/card_train.csv') as cards, open('./files/loan_train.csv') as loans:
-        acc_reader = csv.reader(accounts, delimiter=';')
+    accounts = pd.read_csv('./files/account.csv', sep=';', header=0, index_col=False)
+
+    plot_stacked_bar(accounts['frequency'], 'Account Issuance Frequency')
+
+    if detailed:
         dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
-        freqs = {'Monthly': 0, 'Weekly': 0, 'After Transaction': 0}
-        loans_reader = None
-        cards_reader = None
-        disp_nos = {}
-        acc_owner_card = {'none': 0, 'junior': 0, 'classic': 0, 'gold': 0}
-        acc_cards_no = {}
-        acc_loan_no = {}
+        cards = pd.read_csv('./files/card_train.csv', sep=';', header=0, index_col=False)
+        loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
 
-        if detailed:
-            loans_reader = csv.reader(loans, delimiter=';')
-            cards_reader = csv.reader(cards, delimiter=';')
-            
-        next(acc_reader)
+        acc_dispositions = [get_dispositions(dispositions, acc_id) for acc_id in accounts['account_id'].values]
+        acc_loans = [get_account_loans(loans, acc_id) for acc_id in accounts['account_id'].values]
+        disps_no = pd.Series([len(acc_disps) for acc_disps in acc_dispositions])
+        acc_owner_card = pd.Series([get_owner_card(cards, acc_disps) for acc_disps in acc_dispositions])
+        acc_cards_no = pd.Series([sum(get_card_types_no(cards, account_dispositions).values()) 
+            for account_dispositions in acc_dispositions])
+        acc_loan_no = pd.Series([len(account_loans) for account_loans in acc_loans])
 
-        for account in acc_reader:
-            if len(account) == 4:
-                acc_id = int(account[0])
-
-                if account[2] == 'monthly issuance':
-                    freqs['Monthly'] += 1
-                elif account[2] == 'weekly issuance':
-                    freqs['Weekly'] += 1
-                else:
-                    freqs['After Transaction'] += 1
-
-                if detailed:
-                    acc_dispositions = get_dispositions(dispositions, acc_id)
-                    key = str(len(acc_dispositions))
-
-                    if key in disp_nos:
-                        disp_nos[key] += 1
-                    else:
-                        disp_nos[key] = 1
-
-                    acc_owner_card[get_owner_card(cards, cards_reader, acc_dispositions)] += 1
-                    card_no = sum(get_card_types_no(cards, cards_reader, acc_dispositions))
-
-                    if card_no in acc_cards_no:
-                        acc_cards_no[card_no] += 1
-                    else:
-                        acc_cards_no[card_no] = 1
-
-                    acc_loans = len(get_account_loans(loans, loans_reader, acc_id))
-
-                    if acc_loans in acc_loan_no:
-                        acc_loan_no[acc_loans] += 1
-                    else:
-                        acc_loan_no[acc_loans] = 1
-
-        plot_pie(freqs.values(), freqs.keys(), 'Account Issuance Frequency')
-
-        if detailed:
-            plot_pie(disp_nos.values(), disp_nos.keys(), 'Account Dispositions No')
-            plot_pie(acc_owner_card.values(), acc_owner_card.keys(), 'Account Owner Card Type')
-            plot_pie([acc_owner_card['none'],
-                acc_owner_card['junior'] + acc_owner_card['classic'] + acc_owner_card['gold']], ['No', 'Yes'],
-                'Account Owner Has Card')
-            plot_pie(acc_cards_no.values(), acc_cards_no.keys(), 'Account Card Number')
-            plot_pie(acc_loan_no.values(), acc_loan_no.keys(), 'Loans Per Account')
+        plot_stacked_bar(disps_no, 'Account Dispositions No')
+        plot_stacked_bar(acc_owner_card, 'Account Owner Card Type')
+        plot_stacked_bar(acc_cards_no, 'Account Card Number')
+        plot_stacked_bar(acc_loan_no, 'Loans Per Account')
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
@@ -246,7 +150,7 @@ def analyse_loans():
     clients = pd.read_csv('./files/client.csv', sep=';', header=0, index_col=False)
     age_dist = {'0-19':0, '20-29':0,'30-39':0, '40-49':0, '50-59':0, '60-69':0, '70+':0}
 
-    for i, loan in loans.iterrows():
+    for _, loan in loans.iterrows():
         if len(loan) == 7:
             status = loan['status']
             row = -1
@@ -284,12 +188,12 @@ def analyse_loans():
 
             status_disp.at[row, disp_no] += 1
 
-    axis = status_disp[['1', '2']].plot(kind='bar', stacked=True, rot=0)
-    fig = axis.get_figure()
-    fig.savefig('./figures/Disposition No. & Status.png')
-    plt.close()
+    age_dist_series = pd.DataFrame(columns=age_dist.keys())
+    age_dist_series.loc[0] = age_dist.values()
 
-    plot_pie(age_dist.values(), age_dist.keys(), 'Clients Age at Loan Request')
+    plot_stacked_bar(status_disp[['1', '2']], 'Disposition No. & Status', single_col=False, count_values=False, 
+        double_precision=False)
+    plot_stacked_bar(age_dist_series, 'Clients Age at Loan Request', count_values=False, double_precision=False)
     plot_pie([attr_data['loan_status_appr'], attr_data['loan_status_rej']], ['approved', 'rejected'], 'Loan Status')
     plot_box(attrs, 'Loans')
 
@@ -336,7 +240,7 @@ def calc_missing_values():
             print(key + ': ' + str(missing_vals_count[key]))
         print('\n')
 
-
+# Calculates the average monthly income associated with an account, given its transactions
 def calc_avg_monthly_income(acc_transactions):
     acc_transactions = acc_transactions.sort_values(by=['date'])
     monthly_balances = [[0]]
@@ -398,22 +302,13 @@ def get_acc_transactions(transactions_df, acc_id):
     return transactions_df.loc[transactions_df['account_id'] == acc_id]
 
 # Returns the accounts associated with a given client
-def get_client_accounts(client_id, disp_file, disp_reader, acc_file, acc_reader):
+def get_client_accounts(client_id, dispositions, accounts):
     accs = []
+    client_disps = dispositions[dispositions['client_id'] == client_id]
 
-    disp_file.seek(0)
-    next(disp_reader)
-
-    for disp in disp_reader:
-        if len(disp) == 4 and int(disp[1]) == client_id:
-            acc_id = int(disp[2])
-            acc_file.seek(0)
-            next(acc_reader)
-
-            for acc in acc_reader:
-                if len(acc) == 4 and int(acc[0]) == acc_id:
-                    accs.append(acc)
-                    break
+    for _, disp in client_disps.iterrows():
+        acc = accounts[accounts['account_id'] == disp['account_id']].iloc[0]
+        accs.append(acc)
 
     return accs
 
@@ -471,58 +366,39 @@ def calculate_loan_client_age(client_dob, loan_date):
     return loan_date[0] - client_dob[0]
 
 # Returns the loans associated with a given account
-def get_account_loans(loans_file, loans_reader, acc_id):
-    loans_file.seek(0)
-    next(loans_reader)
-
-    loans = []
-
-    for loan in loans_reader:
-        if len(loan) == 7 and int(loan[1]) == acc_id:
-            loans.append(loan)
-
-    return loans
+def get_account_loans(loans, acc_id):
+    return loans[loans['account_id'] == acc_id]
 
 # Returns the (junior_card_no, classic_card_no, gold_card_no) associated with an account given its associated dispositions
-def get_card_types_no(cards_file, cards_reader, dispositions):
-    classic_no, junior_no, gold_no = 0, 0, 0
+def get_card_types_no(cards, acc_dispositions):
+    card_types = {'junior': 0, 'classic': 0, 'gold': 0}
 
-    for _, disposition in dispositions.iterrows():
+    for _, disposition in acc_dispositions.iterrows():
         disp_id = disposition['disp_id']
-        cards_file.seek(0)
-        next(cards_reader)
+        c_types = cards[cards['disp_id'] == disp_id]['type'].values
 
-        for card in cards_reader:
-            if len(card) == 4 and int(card[1]) == disp_id:
-                card_type = card[2]
+        for c_type in c_types:
+            card_types[c_type] += 1
 
-                if card_type == 'classic':
-                    classic_no += 1
-                elif card_type == 'junior':
-                    junior_no += 1
-                elif card_type == 'gold':
-                    gold_no += 1
-
-    return (junior_no, classic_no, gold_no)
+    return card_types
 
 # Returns the (client_id, disposition_id) of the owner of an account given the ASSOCIATED dispositions
 def get_account_owner_info(dispositions):
-    acc_owner = dispositions[dispositions['type'] == 'OWNER' or dispositions['type'] == 1].iloc[0]
+    acc_owner = dispositions[dispositions['type'] == 'OWNER']
+    acc_owner_disp = acc_owner if len(acc_owner) > 0 else dispositions[dispositions['type'] == 1]
+    acc_owner_disp = acc_owner_disp.iloc[0]
 
-    return (acc_owner.at['client_id'], acc_owner.at['disp_id'])
+    return (acc_owner_disp.at['client_id'], acc_owner_disp.at['disp_id'])
 
 # Returns the card type (or none) of the owner of an account given the ASSOCIATED dispositions
-def get_owner_card(cards_file, cards_reader, acc_dispositions):
+def get_owner_card(cards, acc_dispositions):
     owner = get_account_owner_info(acc_dispositions)
+    owner_card = cards[cards['disp_id'] == owner[1]]
 
-    cards_file.seek(0)
-    next(cards_reader)
-
-    for card in cards_reader:
-        if len(owner) == 2 and int(card[1]) == owner[1]:
-            return card[2]
-
-    return 'none'
+    if len(owner_card) > 0:
+        return owner_card.iloc[0]['type']
+    else:
+        return 'none'
 
 # Returns the dispositions associated with an account given an account id
 def get_dispositions(dispositions, acc_id):
@@ -566,6 +442,41 @@ def plot_confusion_matrix(cm, classes, title):
     plt.savefig('./figures/' + title + '_confusion_matrix.png')
     plt.close()
 
+# Draws a stacked bar plot given a pandas dataframe / series
+def plot_stacked_bar(df, title, count_values=True, single_col=True, double_precision=True, rename_cols=None):
+    freq = []
+
+    if count_values:
+        freq = df.value_counts(normalize=True, dropna=False) * 100
+        df = freq.to_frame().T
+
+        if rename_cols:
+            df.rename(rename_cols, inplace=True, axis='columns')
+
+    axes = df.plot(kind='bar', stacked=True, rot=0, title=title)
+    
+    for rect in axes.patches:
+        if rect.get_height() > 0:
+            label = ''
+            x = 0
+
+            if double_precision:
+                label = '%.2f' % rect.get_height() + '%'
+            else:
+                label = '%i' % int(rect.get_height())
+
+            if single_col:
+                x = rect.get_x() + rect.get_width() * 1.2
+            else:
+                x = rect.get_x() + rect.get_width() / 2.
+
+            axes.text(x, rect.get_y() + rect.get_height() / 2., label, 
+                ha = 'center', va = 'center')
+
+    fig = axes.get_figure()
+    fig.savefig('./figures/%s.png' % title)
+    plt.close()
+
 # Draws a box chart based on a set of numerical attributes
 def plot_box(attrs, title):
     for attr in attrs.keys():
@@ -599,9 +510,10 @@ def plot_pie(sizes, labels, title):
 def main():
     parser = argparse.ArgumentParser(description='Data Analysis')
     parser.add_argument('-c', dest='clients', action='store_true', default=False, help='Analyse Clients')
+    parser.add_argument('-d', dest='detailed', action='store_true', default=False, help='Detailed Account Analysis')
     args = parser.parse_args()
 
-    analyse_data(args.clients)
+    analyse_data(args.clients, args.detailed)
 
 if __name__ == '__main__':
     main()

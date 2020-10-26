@@ -40,15 +40,15 @@ def arrange_complete_data(train, clean=False):
         card_path = './files/card_test.csv'
         transaction_path = './files/trans_test_clean.csv'
 
-    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file, open(card_path) as cards:
+    with open(loan_path) as loans, open('./files/complete_data.csv', 'w', newline='') as complete_data_file:
         loan_reader = csv.reader(loans, delimiter=';')
-        cards_reader = csv.reader(cards, delimiter=';')
         complete_data_writer = csv.writer(complete_data_file, delimiter=';')
         accounts = pd.read_csv('./files/account.csv', sep=';', header=0, index_col=False)
         districts = pd.read_csv('./files/district_clean.csv', sep=';', header=0, index_col=False)
         transactions = pd.read_csv(transaction_path, sep=';', header=0, index_col=False, low_memory=False)
         dispositions = pd.read_csv('./files/disp_clean.csv', sep=';', header=0, index_col=False)
         clients = pd.read_csv('./files/client_clean.csv', sep=';', header=0, index_col=False)
+        cards = pd.read_csv(card_path, sep=';', header=0, index_col=False)
 
         next(loan_reader)
 
@@ -91,7 +91,7 @@ def arrange_complete_data(train, clean=False):
 
             fill_disposition_info(acc_dispositions)
             fill_client_info(clients, acc_dispositions, acc_id, loan_date)
-            fill_card_info(cards, cards_reader, acc_dispositions)
+            fill_card_info(cards, acc_dispositions)
             fill_transaction_info(transactions, acc_id, loan_date)
 
             if train:
@@ -129,26 +129,26 @@ def remove_correlated_attributes(x, thresh=0.8):
 def fill_loan_info(loan):
     complete_data_row['loan_id'] = loan[0]
     complete_data_row['amount'] = loan[3]
-    complete_data_row['duration'] = loan[4]
-    complete_data_row['payments'] = loan[5]
+    #complete_data_row['duration'] = loan[4]
+    #complete_data_row['payments'] = loan[5]
 
 def fill_account_info(account, loan_date):
     ld = du.parse_date(loan_date)
     #complete_data_row['account_age'] = ld[0] - du.parse_date(str(account['date']))[0]
 
 def fill_district_info(district):
-    complete_data_row['no. of inhabitants'] = district['no. of inhabitants']
-    complete_data_row['no. of municipalities with inhabitants < 499'] = district['no. of municipalities with inhabitants < 499 ']
-    complete_data_row['no. of municipalities with inhabitants 500-1999'] = district['no. of municipalities with inhabitants 500-1999']
-    complete_data_row['no. of municipalities with inhabitants 2000-9999'] = district['no. of municipalities with inhabitants 2000-9999 ']
-    complete_data_row['no. of municipalities with inhabitants >10000'] = district['no. of municipalities with inhabitants >10000 ']
-    complete_data_row['no. of cities'] = district['no. of cities ']
-    complete_data_row['ratio of urban inhabitants'] = district['ratio of urban inhabitants ']
-    complete_data_row['average salary'] = district['average salary ']
+    #complete_data_row['no. of inhabitants'] = district['no. of inhabitants']
+    #complete_data_row['no. of municipalities with inhabitants < 499'] = district['no. of municipalities with inhabitants < 499 ']
+    #complete_data_row['no. of municipalities with inhabitants 500-1999'] = district['no. of municipalities with inhabitants 500-1999']
+    #complete_data_row['no. of municipalities with inhabitants 2000-9999'] = district['no. of municipalities with inhabitants 2000-9999 ']
+    #complete_data_row['no. of municipalities with inhabitants >10000'] = district['no. of municipalities with inhabitants >10000 ']
+    #complete_data_row['no. of cities'] = district['no. of cities ']
+    #complete_data_row['ratio of urban inhabitants'] = district['ratio of urban inhabitants ']
+    #complete_data_row['average salary'] = district['average salary ']
     complete_data_row["unemploymant rate '95"] = district["unemploymant rate '95 "]
     complete_data_row["unemploymant rate '96"] = district["unemploymant rate '96 "]
-    complete_data_row['no. of enterpreneurs per 1000 inhabitants'] = district['no. of enterpreneurs per 1000 inhabitants ']
-    complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
+    #complete_data_row['no. of enterpreneurs per 1000 inhabitants'] = district['no. of enterpreneurs per 1000 inhabitants ']
+    #complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
     complete_data_row["no. of commited crimes '96"] = district["no. of commited crimes '96 "]
 
 def fill_disposition_info(acc_dispositions):
@@ -159,15 +159,15 @@ def fill_client_info(clients, acc_dispositions, acc_id, loan_date):
     owner = du.get_acc_owner(acc_id, acc_dispositions, clients)
     loan_owner_age = du.calculate_loan_client_age(str(owner['birth_number']), loan_date)
 
-    complete_data_row['age'] = loan_owner_age
+    #complete_data_row['age'] = loan_owner_age
     #complete_data_row['gender'] = owner['gender']
 
-def fill_card_info(cards, cards_reader, acc_dispositions):
-    card_types = du.get_card_types_no(cards, cards_reader, acc_dispositions)
+def fill_card_info(cards, acc_dispositions):
+    card_types = du.get_card_types_no(cards, acc_dispositions)
     '''
-    complete_data_row['junior_card_no'] = card_types[0]
-    complete_data_row['classic_card_no'] = card_types[1]
-    complete_data_row['gold_card_no'] = card_types[2]
+    complete_data_row['junior_card_no'] = card_types['junior']
+    complete_data_row['classic_card_no'] = card_types['classic']
+    complete_data_row['gold_card_no'] = card_types['gold']
     '''
 
 def fill_transaction_info(transactions, acc_id, loan_date):
@@ -181,17 +181,17 @@ def fill_transaction_info(transactions, acc_id, loan_date):
     attrs = {
         'balance': [trans['balance'] for trans in last_trans],
         'withdrawals': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal'],
-        'withdrawals_cash': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal in cash'],
+        #'withdrawals_cash': [trans['amount'] for trans in last_trans if trans['type'] == 'withdrawal in cash'],
         'credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
         'withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
         'remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
         #'credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
         'credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
-        'other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
+        #'other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
         'k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
         'interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
         'household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
-        'statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
+        #'statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
         #'insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
         'sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
         #'pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
@@ -293,7 +293,7 @@ def clean_transactions(op_mode, k_mode):
             for trans in reader:
                 if len(trans) == 10:
                     if not trans[4] or trans[4].isspace(): # Operation
-                        trans[4] = op_mode
+                        trans[4] = 'interest' # K-Symbol match
 
                     if not trans[7] or trans[7].isspace(): # K-Symbol
                         trans[7] = 'missing' #or k_mode
