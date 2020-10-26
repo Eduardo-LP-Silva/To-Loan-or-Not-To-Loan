@@ -50,6 +50,9 @@ def analyse_transactions():
     plot_stacked_bar(transactions[transactions['operation'] == 'Missing']['k_symbol'], 'Transaction Missing Operation K Symbols')
     plot_stacked_bar(transactions[transactions['k_symbol'] == 'interest credited']['operation'], 'Transaction Interest K Operations')
     plot_stacked_bar(transactions[transactions['k_symbol'] == 'Missing']['operation'], 'Transaction Missing K Operations')
+    plot_stacked_bar(transactions[transactions['operation'] == 'withdrawal in cash']['type'], 'Transaction Withdrawal in Cash Operation Types')
+    plot_stacked_bar(transactions[transactions['k_symbol'] == 'household']['type'], 'Transaction Household K Types')
+    plot_stacked_bar(transactions[transactions['k_symbol'] == 'household']['operation'], 'Transaction Household K Operations')
     plot_box(trans_attrs, 'Transaction')
 
     attr_data['trans_op_mode'] = transactions['operation'].value_counts().idxmax()
