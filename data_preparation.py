@@ -3,10 +3,7 @@ import csv
 import argparse
 import pandas as pd
 import numpy as np
-from pandas import Series, DataFrame
-import sklearn
 from sklearn import preprocessing
-from sklearn.preprocessing import scale
 import data_understanding as du
 
 # Dictionary with the values for one row of the complete data set
@@ -22,17 +19,17 @@ col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'av
 '''
 
 # Generates new development csv with all relevant data from most csv's
-def arrange_complete_data(train, clean=False):
+def arrange_complete_data(train, clean=False, outlier_removal=False):
     complete_data_row.clear()
     attr_data = du.analyse_data()
 
     if clean:
-        clean_data(attr_data)
+        clean_data(attr_data, outlier_removal)
 
     loan_path, card_path, transaction_path = '', '', ''
 
     if train:
-        loan_path = './files/loan_train.csv'
+        loan_path = './files/loan_train_clean.csv'
         card_path = './files/card_train.csv'
         transaction_path = './files/trans_train_clean.csv'
     else:
@@ -273,14 +270,17 @@ def arrange_train_test_data(attr_data):
                 train_writer.writerow(train_row)
 
 # Copies and changes some csv data to new, 'cleaned' files
-def clean_data(attr_data):
+def clean_data(attr_data, outlier_removal=False):
     clean_clients()
     clean_dispositions()
-    clean_transactions(attr_data['trans_op_mode'], attr_data['trans_k_mode'])
+    clean_transactions(attr_data['trans_op_mode'], attr_data['trans_k_mode'], attr_data['Transaction_amount_thresh'],
+        attr_data['Transaction_balance_thresh'], outlier_removal=outlier_removal)
     clean_districts(attr_data['dist_avg_95_ur'], attr_data['dist_avg_95_cr'])
+    clean_loans(attr_data['Loans_amount_thresh'], attr_data['Loans_duration_thresh'], attr_data['Loans_payments_thresh'],
+        outlier_removal=outlier_removal)
 
 # Cleans transactions files
-def clean_transactions(op_mode, k_mode):
+def clean_transactions(op_mode, k_mode, amount_thresh, balance_thresh, outlier_removal=False):
     with open('./files/trans_train.csv') as transactions_train, open('./files/trans_train_clean.csv', 'w', newline='') as transactions_train_clean, open('./files/trans_test.csv') as transactions_test, open('./files/trans_test_clean.csv', 'w', newline='') as transactions_test_clean:
         read_files = [transactions_train, transactions_test]
         write_files = [transactions_train_clean, transactions_test_clean]
@@ -292,6 +292,13 @@ def clean_transactions(op_mode, k_mode):
 
             for trans in reader:
                 if len(trans) == 10:
+                    amount = float(trans[5])
+                    balance = float(trans[6])
+
+                    if (outlier_removal and (amount < amount_thresh[0] or amount > amount_thresh[1]
+                        or balance < balance_thresh[0] or balance > balance_thresh[1])):
+                        continue
+
                     if not trans[4] or trans[4].isspace(): # Operation
                         trans[4] = 'interest' # K-Symbol match
 
@@ -358,8 +365,8 @@ def clean_clients():
 
                 client_writer.writerow(client)
 
-# Copies loans training complete records and changes the status attribute to binary form
-def clean_loans():
+# Copies loans training complete records and removes outliers
+def clean_loans(amount_thrs, duration_thrs, payments_thrs, outlier_removal=False):
     with open('./files/loan_train.csv') as loans, open('./files/loan_train_clean.csv', 'w', newline='') as loans_new:
         loan_reader = csv.reader(loans, delimiter=';')
         loan_writer = csv.writer(loans_new, delimiter=';')
@@ -367,15 +374,15 @@ def clean_loans():
 
         for row in loan_reader:
             if len(row) == 7:
-                status = int(row[6])
-                pred_attrs = {'amount': int(row[3]), 'duration': int(row[4]), 'payments': int(row[5])}
+                amount = int(row[3])
+                duration = int(row[4])
+                payments = int(row[5])
 
-                # convert to standard binary classification (-1 is positive class)
-                if status == -1:
-                    row[6] = 1
-                elif status == 1:
-                    row[6] = 0
-
+                if (outlier_removal and (amount < amount_thrs[0] or amount > amount_thrs[1]
+                    or duration < duration_thrs[0] or duration > duration_thrs[1]
+                    or payments < payments_thrs[0] or payments > payments_thrs[1])):
+                    continue
+                
                 loan_writer.writerow(row)
 
 def normalize_list(list):
@@ -412,9 +419,10 @@ def normalize_test_data():
 def main():
     parser = argparse.ArgumentParser(description='Data Preparation')
     parser.add_argument('-c', dest='clean', action='store_true', default=False, help='Clean CSVs')
+    parser.add_argument('-o', dest='outlier', action='store_true', default=False, help='Remove Outliers')
     args = parser.parse_args()
 
-    arrange_complete_data(True, args.clean)
+    arrange_complete_data(True, args.clean, args.outlier)
     # arrange_data()
     # normalize_data()
 

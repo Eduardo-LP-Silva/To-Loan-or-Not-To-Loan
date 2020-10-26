@@ -56,7 +56,7 @@ def analyse_transactions():
     plot_stacked_bar(transactions[transactions['operation'] == 'withdrawal in cash']['type'], 'Transaction Withdrawal in Cash Operation Types')
     plot_stacked_bar(trans_household_k['type'], 'Transaction Household K Types')
     plot_stacked_bar(trans_household_k['operation'], 'Transaction Household K Operations')
-    plot_box(trans_attrs, 'Transaction')
+    plot_box(trans_attrs, 'Transaction', save_thresholds=True)
 
     attr_data['trans_op_mode'] = transactions['operation'].value_counts().idxmax()
     attr_data['trans_k_mode'] = transactions['k_symbol'].value_counts().idxmax()
@@ -208,7 +208,7 @@ def analyse_loans():
         double_precision=False)
     plot_stacked_bar(age_dist_series, 'Clients Age at Loan Request', count_values=False, double_precision=False)
     plot_stacked_bar(loan_status, 'Loan Status', count_values=False)
-    plot_box(attrs, 'Loans')
+    plot_box(attrs, 'Loans', save_thresholds=True)
 
 # Calculates (necessary) missing and / or not loan linked values
 def calc_missing_values():
@@ -491,7 +491,7 @@ def plot_stacked_bar(df, title, count_values=True, single_col=True, double_preci
     plt.close()
 
 # Draws a box chart based on a set of numerical attributes
-def plot_box(attrs, title):
+def plot_box(attrs, title, save_thresholds=False):
     for attr in attrs.keys():
         attr_array = attrs[attr]
         r = plt.boxplot(attr_array, vert=False)
@@ -499,14 +499,17 @@ def plot_box(attrs, title):
         maxThresh = r['whiskers'][1].get_xdata()[1]
 
         thresholds = (minThresh, maxThresh)
+        attr_name = title + '_' + attr
+
+        if save_thresholds:
+            attr_data[attr_name + '_thresh'] = thresholds
 
         print(attr, 'Max: ' + str(max(attr_array)), 'Min: ' + str(min(attr_array)),
             'Avg: ' + str(sum(attr_array) // len(attr_array)), 'Min.Thresh: ' +  str(thresholds[0]),
             'Max.Thresh ' + str(thresholds[1]), sep=' | ')
 
         plt.title(title + ' - ' + attr)
-        #plt.show()
-        plt.savefig('./figures/' + title + '_' + attr + '_box.png')
+        plt.savefig('./figures/' + attr_name + '_box.png')
         plt.close()
 
 # Draws a pie chart based on a set of sizes / numerical data and respective labels
@@ -515,7 +518,6 @@ def plot_pie(sizes, labels, title):
     loan_chart.pie(sizes, labels=labels, autopct='%1.1f%%')
     plt.tight_layout(pad=6.0)
     loan_chart.axis('equal')
-    #plt.show()
     plt.title(title)
     plt.savefig('./figures/' +  title + '.png')
     plt.close()
