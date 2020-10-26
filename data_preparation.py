@@ -137,7 +137,7 @@ def fill_account_info(account, loan_date):
     #complete_data_row['account_age'] = ld[0] - du.parse_date(str(account['date']))[0]
 
 def fill_district_info(district):
-    #complete_data_row['no. of inhabitants'] = district['no. of inhabitants']
+    complete_data_row['no. of inhabitants'] = district['no. of inhabitants']
     complete_data_row['no. of municipalities with inhabitants < 499'] = district['no. of municipalities with inhabitants < 499 ']
     complete_data_row['no. of municipalities with inhabitants 500-1999'] = district['no. of municipalities with inhabitants 500-1999']
     complete_data_row['no. of municipalities with inhabitants 2000-9999'] = district['no. of municipalities with inhabitants 2000-9999 ']

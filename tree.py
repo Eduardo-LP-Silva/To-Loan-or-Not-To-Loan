@@ -6,7 +6,7 @@ from collections import Counter
 from sklearn.base import clone
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test_split, cross_validate, RepeatedStratifiedKFold
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test_split, cross_validate, RepeatedStratifiedKFold, RepeatedKFold
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import roc_auc_score, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils import resample
@@ -124,7 +124,7 @@ def build_model(hp_grid_search=False):
 
 # Evaluates a (untrained) model with repeated stratified k-folds
 def evaluate_model_kfold(clf, x, y, k=5):
-    cv = RepeatedStratifiedKFold(n_splits=k, n_repeats=3, random_state=42)
+    cv = RepeatedKFold(n_splits=k, n_repeats=3, random_state=42)
 
     scores = cross_validate(clf, x, y, scoring=['roc_auc'], cv=cv,
         n_jobs=-1)
