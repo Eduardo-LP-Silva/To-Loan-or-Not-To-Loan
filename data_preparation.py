@@ -1,6 +1,7 @@
 
 import csv
 import argparse
+from os import sep
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
@@ -99,7 +100,22 @@ def arrange_complete_data(train, clean=False, outlier_removal=False):
                 complete_data_writer.writerow(complete_data_row.keys())
 
             complete_data_writer.writerow(complete_data_row.values())
+        
+        if train:
+            plot_complete_data_graphs()
 
+def plot_complete_data_graphs():
+    complete_data = pd.read_csv('./files/complete_data.csv', sep=';', header=0, index_col=False).astype({'status': 'category'})
+    complete_data.replace({'status': {-1: 'Unsuccessful', 1: 'Successful'}, 'gender': {0: 'Male', 1: 'Female'}}, inplace=True)
+    status_y_vars = ['avg_sanctions', 'last_balance', 'negative_balance_no', 'avg_monthly_income']
+    
+    if 'gender' in complete_data.columns:
+        for y_var in status_y_vars:
+            if y_var in complete_data.columns:
+                du.plot_cat(complete_data, 'status', y_var, 'gender', '%s_cat' % y_var, 
+                    palette={'Male': 'royalblue', 'Female': 'hotpink'})
+
+# Removes correlated attributes
 def remove_correlated_attributes(x, thresh=0.8):
     corr_mat = x.corr()
     corr_feats = set()
@@ -157,7 +173,7 @@ def fill_client_info(clients, acc_dispositions, acc_id, loan_date):
     loan_owner_age = du.calculate_loan_client_age(str(owner['birth_number']), loan_date)
 
     complete_data_row['age'] = loan_owner_age
-    #complete_data_row['gender'] = owner['gender']
+    complete_data_row['gender'] = owner['gender']
 
 def fill_card_info(cards, acc_dispositions):
     card_types = du.get_card_types_no(cards, acc_dispositions)

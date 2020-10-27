@@ -92,7 +92,7 @@ def date_split():
 
 # Builds the random forest model and calculates the accuracy and AUC score
 def build_model(hp_grid_search=False):
-    dp.arrange_complete_data(True, False)
+    dp.arrange_complete_data(True, True)
     x, y = load_data(True)
 
     # Best Weights: {-1: 1, 1: 7}

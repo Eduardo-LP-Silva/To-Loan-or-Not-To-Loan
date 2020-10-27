@@ -3,8 +3,9 @@ import argparse
 import operator
 import datetime
 import itertools
-from matplotlib.pyplot import axis
+from matplotlib.pyplot import axis, colormaps, xticks
 from numpy.core.defchararray import count
+from numpy.core.fromnumeric import sort
 import pandas as pd
 import numpy as np
 import seaborn as sn
@@ -36,6 +37,7 @@ def analyse_data(clients=False, detailed=False):
 # Analyses the transactions csv and produces related statistics and metrics
 def analyse_transactions():
     transactions = pd.read_csv('./files/trans_train.csv', sep=';', header=0, index_col=False, low_memory=False)
+    transactions_test = pd.read_csv('./files/trans_test.csv', sep=';', header=0, index_col=False, low_memory=False)
     transactions['operation'].fillna('Missing', inplace=True)
     transactions['k_symbol'].replace('^\s+$', 'Missing', regex=True, inplace=True)
     transactions['k_symbol'].fillna('Missing', inplace=True)
@@ -44,18 +46,22 @@ def analyse_transactions():
     trans_missing_op = transactions[transactions['operation'] == 'Missing']
     trans_missing_k = transactions[transactions['k_symbol'] == 'Missing']
     trans_household_k = transactions[transactions['k_symbol'] == 'household']
+    trans_date_years = pd.Series([parse_date(str(date))[0] for date in transactions['date']])
+    trans_test_date_years = pd.Series([parse_date(str(date))[0] for date in transactions_test['date']])
 
-    plot_stacked_bar(transactions['type'], 'Transaction Types')
-    plot_stacked_bar(transactions['operation'], 'Transaction Operations')
-    plot_stacked_bar(transactions['k_symbol'], 'Transaction K Symbols')
-    plot_stacked_bar(trans_missing_op['type'], 'Transaction Missing Operation Types')
-    plot_stacked_bar(trans_missing_op['k_symbol'], 'Transaction Missing Operation K Symbols')
-    plot_stacked_bar(trans_missing_k['type'], 'Transaction Missing K Types')
-    plot_stacked_bar(trans_missing_k['operation'], 'Transaction Missing K Operations')
-    plot_stacked_bar(transactions[transactions['k_symbol'] == 'interest credited']['operation'], 'Transaction Interest K Operations')
-    plot_stacked_bar(transactions[transactions['operation'] == 'withdrawal in cash']['type'], 'Transaction Withdrawal in Cash Operation Types')
-    plot_stacked_bar(trans_household_k['type'], 'Transaction Household K Types')
-    plot_stacked_bar(trans_household_k['operation'], 'Transaction Household K Operations')
+    plot_bar(transactions['type'], 'Transaction Types')
+    plot_bar(transactions['operation'], 'Transaction Operations')
+    plot_bar(transactions['k_symbol'], 'Transaction K Symbols')
+    plot_bar(trans_missing_op['type'], 'Transaction Missing Operation Types')
+    plot_bar(trans_missing_op['k_symbol'], 'Transaction Missing Operation K Symbols')
+    plot_bar(trans_missing_k['type'], 'Transaction Missing K Types')
+    plot_bar(trans_missing_k['operation'], 'Transaction Missing K Operations')
+    plot_bar(transactions[transactions['k_symbol'] == 'interest credited']['operation'], 'Transaction Interest K Operations')
+    plot_bar(transactions[transactions['operation'] == 'withdrawal in cash']['type'], 'Transaction Withdrawal in Cash Operation Types')
+    plot_bar(trans_household_k['type'], 'Transaction Household K Types')
+    plot_bar(trans_household_k['operation'], 'Transaction Household K Operations')
+    plot_bar(trans_date_years, 'Transactions Date (Years)', stacked=False, double_precision=False)
+    plot_bar(trans_test_date_years, 'Transactions (Test) Date (Years)', stacked=False, double_precision=False)
     plot_box(trans_attrs, 'Transaction', save_thresholds=True)
 
     attr_data['trans_op_mode'] = transactions['operation'].value_counts().idxmax()
@@ -67,12 +73,16 @@ def analyse_clients():
     dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
     accounts = pd.read_csv('./files/account.csv', sep=';', header=0, index_col=False)
 
-    genders = pd.Series([get_client_gender(str(birthdate)) for birthdate in clients['birth_number'].values])
+    client_dobs = clients['birth_number'].values
+
+    genders = pd.Series([get_client_gender(str(birthdate)) for birthdate in client_dobs])
+    client_dob_years = pd.Series([parse_date(str(birthdate))[0] for birthdate in client_dobs])
     client_account_no = pd.Series([len(get_client_accounts(client_id, dispositions, accounts)) 
         for client_id in clients['client_id'].values])
 
-    plot_stacked_bar(genders, 'Clients Gender', rename_cols={0: 'Male', 1: 'Female'})
-    plot_stacked_bar(client_account_no, 'Accounts per Client')
+    plot_bar(genders, 'Clients Gender', rename_cols={0: 'Male', 1: 'Female'})
+    plot_bar(client_account_no, 'Accounts per Client')
+    plot_bar(client_dob_years, 'Clients Year of Birth', stacked=False, double_precision=False)
 
 # Analyses districts csv and produces box charts for each relevant attribute
 def analyse_districts():
@@ -116,18 +126,27 @@ def analyse_districts():
 # Analyses dispositions csv and produces disposition type pie chart
 def analyse_dispositions():
     dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
-    plot_stacked_bar(dispositions['type'], 'Disposition Types')
+    plot_bar(dispositions['type'], 'Disposition Types')
 
 # Analyses training cards csv and produces card type pie chart
 def analyse_cards():
     cards = pd.read_csv('./files/card_train.csv', sep=';', header=0, index_col=False)
-    plot_stacked_bar(cards['type'], 'Card Type')
+    cards_test = pd.read_csv('./files/card_test.csv', sep=';', header=0, index_col=False)
+
+    cards_issued_date = pd.Series([parse_date(str(date))[0] for date in cards['issued']])
+    cards_test_issued_date = pd.Series([parse_date(str(date))[0] for date in cards_test['issued']])
+
+    plot_bar(cards['type'], 'Card Type')
+    plot_bar(cards_issued_date, 'Cards Issued Date (Years)', stacked=False, double_precision=False)
+    plot_bar(cards_test_issued_date, 'Cards (Test) Issued Date (Years)', stacked=False, double_precision=False)
 
 # Analyses accounts csv and produces various statistics regarding them
 def analyse_accounts(detailed):
     accounts = pd.read_csv('./files/account.csv', sep=';', header=0, index_col=False)
+    accs_date = pd.Series([parse_date(str(date))[0] for date in accounts['date']])
 
-    plot_stacked_bar(accounts['frequency'], 'Account Issuance Frequency')
+    plot_bar(accounts['frequency'], 'Account Issuance Frequency')
+    plot_bar(accs_date, 'Accounts Creation Date (Years)', stacked=False, double_precision=False)
 
     if detailed:
         dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
@@ -142,19 +161,21 @@ def analyse_accounts(detailed):
             for account_dispositions in acc_dispositions])
         acc_loan_no = pd.Series([len(account_loans) for account_loans in acc_loans])
 
-        plot_stacked_bar(disps_no, 'Account Dispositions No')
-        plot_stacked_bar(acc_owner_card, 'Account Owner Card Type')
-        plot_stacked_bar(acc_cards_no, 'Account Card Number')
-        plot_stacked_bar(acc_loan_no, 'Loans Per Account')
+        plot_bar(disps_no, 'Account Dispositions No')
+        plot_bar(acc_owner_card, 'Account Owner Card Type')
+        plot_bar(acc_cards_no, 'Account Card Number')
+        plot_bar(acc_loan_no, 'Loans Per Account')
 
 # Analyses training loans csv and produces relevant attributes box chart and loan status pie chart
 def analyse_loans():
     attrs = {'amount': [], 'duration': [], 'payments': []}
     status_disp = pd.DataFrame([[0, 0], [0, 0]], columns=['1', '2'], index=['Unsuccessful', 'Successful'])
     loans = pd.read_csv('./files/loan_train.csv', sep=';', header=0, index_col=False)
+    loans_test = pd.read_csv('./files/loan_test.csv', sep=';', header=0, index_col=False)
     dispositions = pd.read_csv('./files/disp.csv', sep=';', header=0, index_col=False)
     clients = pd.read_csv('./files/client.csv', sep=';', header=0, index_col=False)
     age_dist = {'0-19':0, '20-29':0,'30-39':0, '40-49':0, '50-59':0, '60-69':0, '70+':0}
+    gender_dist = {0: 0, 1: 0}
 
     for _, loan in loans.iterrows():
         if len(loan) == 7:
@@ -164,6 +185,8 @@ def analyse_loans():
             acc_id = loan['account_id']
             owner = get_acc_owner(acc_id, dispositions, clients)
             owner_loan_age = calculate_loan_client_age(str(owner['birth_number']), str(loan['date']))
+            gender = get_client_gender(str(owner['birth_number']))
+            gender_dist[gender] += 1
 
             if owner_loan_age < 20:
                 age_dist['0-19'] += 1
@@ -204,10 +227,23 @@ def analyse_loans():
     loan_status = pd.DataFrame(columns=['Successful', 'Unsuccessful'])
     loan_status.loc[0] = [suc_loan_percent, unsuc_loan_percent]
 
-    plot_stacked_bar(status_disp[['1', '2']], 'Disposition No. & Status', single_col=False, count_values=False, 
+    gender_total = gender_dist[0] + gender_dist[1]
+    male_percent = gender_dist[0] / gender_total * 100
+    female_percent = gender_dist[1] / gender_total * 100
+
+    gender_df = pd.DataFrame(columns=['Male', 'Female'])
+    gender_df.loc[0] = [male_percent, female_percent]
+
+    loans_date = pd.Series([parse_date(str(date))[0] for date in loans['date']])
+    loans_test_date = pd.Series([parse_date(str(date))[0] for date in loans_test['date']])
+
+    plot_bar(gender_df, 'Loan Genders', count_values=False)
+    plot_bar(loans_date, 'Loans Date (Years)', stacked=False, double_precision=False)
+    plot_bar(loans_test_date, 'Loans (Test) Date (Years)', stacked=False, double_precision=False)
+    plot_bar(status_disp[['1', '2']], 'Disposition No. & Status', single_col=False, count_values=False, 
         double_precision=False)
-    plot_stacked_bar(age_dist_series, 'Clients Age at Loan Request', count_values=False, double_precision=False)
-    plot_stacked_bar(loan_status, 'Loan Status', count_values=False)
+    plot_bar(age_dist_series, 'Clients Age at Loan Request', count_values=False, double_precision=False)
+    plot_bar(loan_status, 'Loan Status', count_values=False)
     plot_box(attrs, 'Loans', save_thresholds=True)
 
 # Calculates (necessary) missing and / or not loan linked values
@@ -425,11 +461,20 @@ def get_district(districts, dist_id):
 def get_account(accounts, acc_id):
     return accounts[accounts['account_id'] == acc_id].iloc[0]
 
+# Plots a scatter plot
+def plot_cat(data, x, y, hue, title, palette=None):
+    if palette:
+        plot = sn.catplot(x=x, y=y, hue=hue, data=data, palette=palette)
+    else:
+        plot = sn.catplot(x=x, y=y, hue=hue, data=data)
+        
+    plot.savefig('./figures/%s.png' % title)
+    plt.close()
+    
 # Plots a heatmap corresponding to a correlation matrix
 def plot_correlation_matrix(corr_mat):
-    fig = plt.figure(figsize=(50, 50))
+    plt.figure(figsize=(50, 50))
     sn.heatmap(corr_mat, annot=True)
-    #plt.show()
     plt.savefig('./figures/correlation_matrix.png')
     plt.close()
 
@@ -451,40 +496,55 @@ def plot_confusion_matrix(cm, classes, title):
     plt.tight_layout()
     plt.ylabel('Actual Values')
     plt.xlabel('Predicted Values')
-    #plt.show()
     plt.savefig('./figures/' + title + '_confusion_matrix.png')
     plt.close()
 
 # Draws a stacked bar plot given a pandas dataframe / series
-def plot_stacked_bar(df, title, count_values=True, single_col=True, double_precision=True, rename_cols=None):
+def plot_bar(df, title, stacked=True, count_values=True, single_col=True, double_precision=True, 
+    rename_cols=None):
     freq = []
 
     if count_values:
-        freq = df.value_counts(normalize=True, dropna=False) * 100
+        if stacked:
+            freq = df.value_counts(normalize=True, dropna=False) * 100
+        else:
+            freq = df.value_counts(dropna=False).sort_index()
+
         df = freq.to_frame().T
 
         if rename_cols:
             df.rename(rename_cols, inplace=True, axis='columns')
 
-    axes = df.plot(kind='bar', stacked=True, rot=0, title=title)
+    axes = None
+
+    if single_col:
+        axes = df.plot(kind='bar', stacked=stacked, rot=0, title=title, xticks=[])
+    else:
+        axes = df.plot(kind='bar', stacked=stacked, rot=0, title=title)
     
     for rect in axes.patches:
         if rect.get_height() > 0:
             label = ''
             x = 0
+            color = ''
+            font_weight = ''
 
             if double_precision:
                 label = '%.2f' % rect.get_height() + '%'
             else:
                 label = '%i' % int(rect.get_height())
 
-            if single_col:
+            if single_col and stacked:
                 x = rect.get_x() + rect.get_width() * 1.2
+                color = 'black'
+                font_weight = 'regular'
             else:
                 x = rect.get_x() + rect.get_width() / 2.
+                color = 'white'
+                font_weight = 'bold'
 
             axes.text(x, rect.get_y() + rect.get_height() / 2., label, 
-                ha = 'center', va = 'center')
+                ha = 'center', va = 'center', fontweight=font_weight, color=color)
 
     fig = axes.get_figure()
     fig.savefig('./figures/%s.png' % title)
