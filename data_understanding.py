@@ -479,11 +479,11 @@ def plot_cat(data, x, y, hue, title, palette=None):
     plt.close()
     
 # Plots a heatmap corresponding to a correlation matrix
-def plot_correlation_matrix(corr_mat):
+def plot_correlation_matrix(corr_mat, title):
     plt.rcParams['font.size'] = 16.0
     plt.figure(figsize=(50, 50))
     sn.heatmap(corr_mat, annot=True)
-    plt.savefig('./figures/correlation_matrix.png')
+    plt.savefig('./figures/%s.png' % title)
     plt.close()
     plt.rcParams['font.size'] = 8.0
 

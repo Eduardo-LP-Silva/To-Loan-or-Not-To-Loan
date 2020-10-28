@@ -91,8 +91,8 @@ def date_split():
     return x_train, y_train, x_test, y_test
 
 # Builds the random forest model and calculates the accuracy and AUC score
-def build_model(grid_search=False, rand_search=False):
-    dp.arrange_complete_data(True, True)
+def build_model(grid_search=False, rand_search=False, clean_data=True, rem_outlier=False):
+    dp.arrange_complete_data(True, clean=clean_data, outlier_removal=rem_outlier)
     x, y = load_data(True)
 
     # data = load_loan_data()
@@ -141,7 +141,7 @@ def test(clf, x_test, y_test):
     y_pred = clf.predict(x_test)
 
     cm = confusion_matrix(y_test, y_pred)
-    du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
+    du.plot_confusion_matrix(cm, ['Unsuccessful', 'Successful'], 'Decision Tree')
 
     get_feature_importance(clf)
 
@@ -316,8 +316,12 @@ def main():
     parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
     parser.add_argument('-g', dest='grid_search', action='store_true', default=False, help='Perform hyper-parameter grid search')
     parser.add_argument('-r', dest='rand_search', action='store_true', default=False, help='Perform hyper-parameter random search')
+    parser.add_argument('-c', dest='clean', action='store_true', default=False, help='Clean CSVs')
+    parser.add_argument('-o', dest='outlier', action='store_true', default=False, help='Remove Outliers')
+
     args = parser.parse_args()
-    clf = build_model(grid_search=args.grid_search, rand_search=args.rand_search)
+    clf = build_model(grid_search=args.grid_search, rand_search=args.rand_search, clean_data=args.clean, 
+        rem_outlier=args.outlier)
 
     if args.vis_tree:
         visualize_tree(clf)

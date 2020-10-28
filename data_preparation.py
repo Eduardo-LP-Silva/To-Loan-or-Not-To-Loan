@@ -24,7 +24,7 @@ def arrange_complete_data(train, clean=False, outlier_removal=False):
     complete_data_row.clear()
     attr_data = du.analyse_data()
 
-    if clean:
+    if clean or outlier_removal:
         clean_data(attr_data, outlier_removal)
 
     loan_path, card_path, transaction_path = '', '', ''
@@ -136,7 +136,7 @@ def remove_correlated_attributes(x, thresh=0.8):
                 print('%s & %s: %.2f' % (col_name, corr_mat.columns[j], corr_val))
                 break
 
-    du.plot_correlation_matrix(corr_mat)
+    du.plot_correlation_matrix(corr_mat, 'correlation_matrix')
 
     return x.drop(labels=corr_feats, axis=1), corr_feats
 
