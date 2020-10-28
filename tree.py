@@ -238,22 +238,25 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy.fit(x_train, y_train)
     print('\nDummy Accuracy: %.2f' % (dummy.score(x_test, y_test)))
 
-def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
-    sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
-    x_upsampled, y_upsampled = sm.fit_resample(x_train, y_train)
-    y_counter = Counter(y_upsampled)
+def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5, smote=True, undersample=True):
 
-    print('\nAfter SMOTE (1/2)')
-    print('Positive, Negative training Y: %s' % y_counter)
+    if smote:
+        sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
+        x_train, y_train = sm.fit_resample(x_train, y_train)
+        y_counter = Counter(y_train)
 
-    rus = RandomUnderSampler(sampling_strategy=1, random_state=42)
-    x_undersampled, y_undersampled = rus.fit_resample(x_upsampled, y_upsampled)
-    y_counter = Counter(y_undersampled)
+        print('\nAfter SMOTE')
+        print('Positive, Negative training Y: %s' % y_counter)
 
-    print('After Undersampling (2/2)')
-    print('Positive, Negative training Y: %s' % y_counter)
+    if undersample:
+        rus = RandomUnderSampler(sampling_strategy=1, random_state=42)
+        x_train, y_train = rus.fit_resample(x_train, y_train)
+        y_counter = Counter(y_train)
 
-    return x_undersampled, y_undersampled
+        print('After Random Undersampling')
+        print('Positive, Negative training Y: %s' % y_counter)
+
+    return x_train, y_train
 
 # Balances the training set given a ratio
 def undersample_majority_class(x_train, y_train, ratio):
