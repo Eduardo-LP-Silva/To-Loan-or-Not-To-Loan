@@ -91,16 +91,9 @@ def date_split():
     return x_train, y_train, x_test, y_test
 
 # Builds the random forest model and calculates the accuracy and AUC score
-def build_model(hp_grid_search=False):
+def build_model(grid_search=False, rand_search=False):
     dp.arrange_complete_data(True, True)
     x, y = load_data(True)
-
-    # Best Weights: {-1: 1, 1: 7}
-    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=5, min_samples_leaf=2,
-        max_depth=None, n_estimators=500, class_weight={-1: 1, 1: 7}, random_state=42)
-    clf_original = clone(clf)
-
-    # clf = hyper_parameter_randomized_search()
 
     # data = load_loan_data()
     # rewrite_loans(data, [95], [96])
@@ -109,46 +102,55 @@ def build_model(hp_grid_search=False):
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
     x_train_balanced, y_train_balanced = smote_and_undersample(x_train, y_train, 0.5, 3)
 
+    if rand_search:
+        hyper_parameter_randomized_search(x_train_balanced, y_train_balanced, x_test, y_test)
+
+    if grid_search:
+        hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+
     print('\nTraining cases: ' + str(len(x_train_balanced)))
     print('Test cases: ' + str(len(x_test)))
 
-    clf.fit(x_train_balanced, y_train_balanced)
-    y_pred = clf.predict(x_test)
-    eval_trained_model(clf, x_train_balanced, y_train_balanced, x_test, y_test, y_pred)
-    evaluate_model_kfold(clf_original, x_train_balanced, y_train_balanced, 10)
+    dummy_classifier(x_train_balanced, y_train_balanced, x_test, y_test)
 
-    if hp_grid_search:
-        hyper_parameter_grid_search(x_train_balanced, y_train_balanced, x_test, y_test)
+    # Best Weights: {-1: 1, 1: 7}
+    clf = RandomForestClassifier(max_features='sqrt', criterion='gini', min_samples_split=5, min_samples_leaf=2,
+        max_depth=None, n_estimators=500, class_weight={-1: 1, 1: 7}, random_state=42)
+
+    clf = train(clf, x_train_balanced, y_train_balanced, 10)
+    test(clf, x_test, y_test)
 
     return clf
 
-# Evaluates a (untrained) model with repeated stratified k-folds
-def evaluate_model_kfold(clf, x, y, k=5):
+# Trains a model and evaluates it using K-Folds
+def train(clf, x, y, k=5):
     cv = RepeatedKFold(n_splits=k, n_repeats=3, random_state=42)
+    scores = cross_validate(clf, x, y, scoring=['accuracy', 'precision', 'recall', 'f1', 'roc_auc'], cv=cv, n_jobs=-1)
 
-    scores = cross_validate(clf, x, y, scoring=['roc_auc'], cv=cv,
-        n_jobs=-1)
+    print('\n--- Training ---')
+    print('Accuracy: %.2f' % np.mean(scores['test_accuracy']))
+    print('Precison: %.2f' % np.mean(scores['test_precision']))
+    print('Recall: %.2f' % np.mean(scores['test_recall']))
+    print('F1: %.2f' % np.mean(scores['test_f1']))
+    print('ROC AUC: %.5f' % np.mean(scores['test_roc_auc']))
 
-    print('\n--- Repeated Stratified K-Fold Average Performance ---')
+    return clf.fit(x, y)
 
-    for key, vals in scores.items():
-        if key.startswith('test_'):
-            print('%s: %.5f' % (key, np.mean(vals)))
+# Tests and evaluates a trained model given its training and test data sets
+def test(clf, x_test, y_test):
+    y_pred = clf.predict(x_test)
 
-# Evaluates a trained model given its training and test data sets, as well as its predictions
-def eval_trained_model(clf, x_train, y_train, x_test, y_test, y_pred):
     cm = confusion_matrix(y_test, y_pred)
     du.plot_confusion_matrix(cm, ['Rejected', 'Approved'], 'Decision Tree')
 
     get_feature_importance(clf)
-    dummy_classifier(x_train, y_train, x_test, y_test)
 
-    print('\n--- Fitted Model Performance ---')
+    print('\n--- Test ---')
     print('Accuracy: %.2f' % (accuracy_score(y_test, y_pred)))
     print('Precision: %.2f' % (precision_score(y_test, y_pred)))
     print('Recall: %.2f' % (recall_score(y_test, y_pred)))
     print('F1: %.2f' % (f1_score(y_test, y_pred)))
-    print('AUC Score: %.5f' % calc_auc(clf, x_test, y_test))
+    print('ROC AUC: %.5f' % calc_auc(clf, x_test, y_test))
 
 # Train / Test Stratified Dataset Split
 def strat_train_test_split(x, y, test_size):
@@ -171,19 +173,31 @@ def strat_train_test_split(x, y, test_size):
     return x_train, x_test, y_train, y_test
 
 # Executes a hyper parameter randomized search on a Random Forest
-def hyper_parameter_randomized_search():
+def hyper_parameter_randomized_search(x_train, y_train, x_test, y_test):
     param_grid = {
         'max_features': ['sqrt', None, 'log2'],
-        'min_samples_leaf': [2, 5, 10],
-        'min_samples_split': [2, 5, 10],
-        'n_estimators': [300, 500, 900],
+        'max_depth': [1, 2, 3, 4, 5, 6, None],
+        'min_samples_leaf': [i for i in range(1, 11)],
+        'min_samples_split': [i for i in range(2, 11)],
+        'n_estimators': [i * 100 for i in range(1, 11)],
         'criterion': ['gini', 'entropy']
     }
 
     clf = RandomForestClassifier(max_features=None, max_depth=None, random_state=42)
-    randomized_search = RandomizedSearchCV(estimator = clf, param_distributions = param_grid, n_iter = 100, cv = 3, verbose=2, random_state=42, n_jobs = -1)
+    rand_search = RandomizedSearchCV(estimator=clf, param_distributions=param_grid, n_iter=50, verbose=1,
+        cv=10, random_state=42, n_jobs=1)
+    rand_search.fit(x_train, y_train)
 
-    return randomized_search
+    print('\n--- Hyper Parameter Random Search Results ---')
+    print(rand_search.best_params_)
+
+    y_pred = rand_search.predict(x_test)
+
+    print('Accuracy: %.2f' % (accuracy_score(y_test, y_pred) * 100) + '%')
+    print('Precision: %.2f' % (precision_score(y_test, y_pred)))
+    print('Recall: %.2f' % (recall_score(y_test, y_pred)))
+    print('F1: %.2f' % (f1_score(y_test, y_pred)))
+    print('AUC Score: %.5f' % calc_auc(rand_search.best_estimator_, x_test, y_test))
 
 # Executes a hyper parameter grid search on a Random Forest
 def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
@@ -206,6 +220,9 @@ def hyper_parameter_grid_search(x_train, y_train, x_test, y_test):
     y_pred = grid_search.predict(x_test)
 
     print('Accuracy: %.1f' % (accuracy_score(y_test, y_pred) * 100) + '%')
+    print('Precision: %.2f' % (precision_score(y_test, y_pred)))
+    print('Recall: %.2f' % (recall_score(y_test, y_pred)))
+    print('F1: %.2f' % (f1_score(y_test, y_pred)))
     print('AUC Score: %.2f' % calc_auc(grid_search.best_estimator_, x_test, y_test))
 
 # Returns a model's AUC
@@ -219,7 +236,7 @@ def calc_auc(clf, x_test, y_test):
 def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy = DummyClassifier(strategy='most_frequent')
     dummy.fit(x_train, y_train)
-    print('\nDummy Score: %.2f' % (dummy.score(x_test, y_test)))
+    print('\nDummy Accuracy: %.2f' % (dummy.score(x_test, y_test)))
 
 def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5):
     sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
@@ -298,8 +315,9 @@ def main():
     parser.add_argument('-t', dest='test', action='store_true', default=False, help='Generate Kaggle test set predictions')
     parser.add_argument('-v', dest='vis_tree', action='store_true', default=False, help='Generate image of the Decision Tree')
     parser.add_argument('-g', dest='grid_search', action='store_true', default=False, help='Perform hyper-parameter grid search')
+    parser.add_argument('-r', dest='rand_search', action='store_true', default=False, help='Perform hyper-parameter random search')
     args = parser.parse_args()
-    clf = build_model(args.grid_search)
+    clf = build_model(grid_search=args.grid_search, rand_search=args.rand_search)
 
     if args.vis_tree:
         visualize_tree(clf)
