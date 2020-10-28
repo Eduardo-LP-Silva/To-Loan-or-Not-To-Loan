@@ -462,6 +462,13 @@ def get_account(accounts, acc_id):
     return accounts[accounts['account_id'] == acc_id].iloc[0]
 
 # Plots a scatter plot
+def plot_scatter(df, x, y, title, hue=None, size=None, palette=None):
+    axes = sn.scatterplot(data=df, x=x, y=y, hue=hue, size=size, sizes=(20, 140), palette=palette)
+    fig = axes.get_figure()
+    fig.savefig('./figures/%s.png' % title)
+    plt.close()
+
+# Plots a cat plot
 def plot_cat(data, x, y, hue, title, palette=None):
     if palette:
         plot = sn.catplot(x=x, y=y, hue=hue, data=data, palette=palette)
@@ -473,10 +480,12 @@ def plot_cat(data, x, y, hue, title, palette=None):
     
 # Plots a heatmap corresponding to a correlation matrix
 def plot_correlation_matrix(corr_mat):
+    plt.rcParams['font.size'] = 16.0
     plt.figure(figsize=(50, 50))
     sn.heatmap(corr_mat, annot=True)
     plt.savefig('./figures/correlation_matrix.png')
     plt.close()
+    plt.rcParams['font.size'] = 8.0
 
 # Plots a confusion matrix
 def plot_confusion_matrix(cm, classes, title):
@@ -499,7 +508,7 @@ def plot_confusion_matrix(cm, classes, title):
     plt.savefig('./figures/' + title + '_confusion_matrix.png')
     plt.close()
 
-# Draws a stacked bar plot given a pandas dataframe / series
+# Draws a bar plot given a pandas dataframe / series
 def plot_bar(df, title, stacked=True, count_values=True, single_col=True, double_precision=True, 
     rename_cols=None):
     freq = []
