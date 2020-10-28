@@ -116,6 +116,9 @@ def plot_complete_data_graphs():
     du.plot_scatter(complete_data, 'avg_credits_cash', 'avg_other_bank_collections', 
         'avg_credits_cash_avg_other_bank_collections', hue='status', palette=status_palette)
 
+    du.plot_scatter(complete_data, "no. of commited crimes '96", 'average salary', 
+        'crimes96_avg_salary_cities', hue='status', size='no. of cities', palette=status_palette)
+
 # Removes correlated attributes
 def remove_correlated_attributes(x, thresh=0.8):
     corr_mat = x.corr()
@@ -159,10 +162,10 @@ def fill_district_info(district):
     complete_data_row['no. of cities'] = district['no. of cities ']
     complete_data_row['ratio of urban inhabitants'] = district['ratio of urban inhabitants ']
     complete_data_row['average salary'] = district['average salary ']
-    complete_data_row["unemploymant rate '95"] = district["unemploymant rate '95 "]
+    #complete_data_row["unemploymant rate '95"] = district["unemploymant rate '95 "]
     complete_data_row["unemploymant rate '96"] = district["unemploymant rate '96 "]
     complete_data_row['no. of enterpreneurs per 1000 inhabitants'] = district['no. of enterpreneurs per 1000 inhabitants ']
-    complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
+    #complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
     complete_data_row["no. of commited crimes '96"] = district["no. of commited crimes '96 "]
 
 def fill_disposition_info(acc_dispositions):
