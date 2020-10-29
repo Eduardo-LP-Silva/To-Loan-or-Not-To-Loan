@@ -100,7 +100,7 @@ def build_model(grid_search=False, rand_search=False, clean_data=True, rem_outli
     # x_train, y_train, x_test, y_test = date_split()
 
     x_train, x_test, y_train, y_test = strat_train_test_split(x, y, 0.2)
-    x_train_balanced, y_train_balanced = smote_and_undersample(x_train, y_train, 0.5, 3)
+    x_train_balanced, y_train_balanced = smote_and_undersample(x_train, y_train, 0.8, k_neighbors=3)
 
     if rand_search:
         hyper_parameter_randomized_search(x_train_balanced, y_train_balanced, x_test, y_test)
@@ -238,10 +238,10 @@ def dummy_classifier(x_train, y_train, x_test, y_test):
     dummy.fit(x_train, y_train)
     print('\nDummy Accuracy: %.2f' % (dummy.score(x_test, y_test)))
 
-def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5, smote=True, undersample=True):
+def smote_and_undersample(x_train, y_train, smote_ss, us_ss=1.0, k_neighbors=5, smote=True, undersample=True):
 
     if smote:
-        sm = BorderlineSMOTE(sampling_strategy=ratio, k_neighbors=k_neighbors, random_state=42)
+        sm = BorderlineSMOTE(sampling_strategy=smote_ss, k_neighbors=k_neighbors, random_state=42)
         x_train, y_train = sm.fit_resample(x_train, y_train)
         y_counter = Counter(y_train)
 
@@ -249,7 +249,7 @@ def smote_and_undersample(x_train, y_train, ratio, k_neighbors=5, smote=True, un
         print('Positive, Negative training Y: %s' % y_counter)
 
     if undersample:
-        rus = RandomUnderSampler(sampling_strategy=1, random_state=42)
+        rus = RandomUnderSampler(sampling_strategy=us_ss, random_state=42)
         x_train, y_train = rus.fit_resample(x_train, y_train)
         y_counter = Counter(y_train)
 

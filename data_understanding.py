@@ -463,10 +463,11 @@ def get_account(accounts, acc_id):
 
 # Plots a scatter plot
 def plot_scatter(df, x, y, title, hue=None, size=None, palette=None):
-    axes = sn.scatterplot(data=df, x=x, y=y, hue=hue, size=size, sizes=(20, 140), palette=palette)
-    fig = axes.get_figure()
-    fig.savefig('./figures/%s.png' % title)
-    plt.close()
+    if x in df and y in df and (not hue or hue in df) and (not size or size in df):
+        axes = sn.scatterplot(data=df, x=x, y=y, hue=hue, size=size, sizes=(20, 140), palette=palette)
+        fig = axes.get_figure()
+        fig.savefig('./figures/%s.png' % title)
+        plt.close()
 
 # Plots a cat plot
 def plot_cat(data, x, y, hue, title, palette=None):
