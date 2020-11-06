@@ -1,3 +1,4 @@
+import os
 import csv
 import argparse
 import operator
@@ -21,6 +22,10 @@ attr_data = {'loan_status_appr': 0, 'loan_status_rej': 0, 'trans_op_mode': '', '
 
 # Analyses csv's data and produces respective statistics
 def analyse_data(clients=False, detailed=False):
+
+    if not os.path.exists('./figures/'):
+        os.makedirs('./figures/')
+
     calc_missing_values()
     analyse_loans()
     analyse_accounts(detailed)

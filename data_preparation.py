@@ -10,15 +10,6 @@ import data_understanding as du
 # Dictionary with the values for one row of the complete data set
 complete_data_row = {}
 
-'''
-# Best Params
-# column headers for final training / testing data
-col_names = ['loan_id', 'amount', 'payments', 'last_balance', 'avg_balance', 'avg_withdrawals', 'negative_balance',
-    'dist. no. of inhabitants', 'dist. average salary', 'dist. unemploymant rate 95', 'dist. unemploymant rate 96',
-    'dist. no. of commited crimes 95', 'dist. no. of commited crimes 96',
-    'status']
-'''
-
 # Generates new development csv with all relevant data from most csv's
 def arrange_complete_data(train, clean=False, outlier_removal=False):
     complete_data_row.clear()
@@ -151,7 +142,7 @@ def fill_loan_info(loan):
 
 def fill_account_info(account, loan_date):
     ld = du.parse_date(loan_date)
-    #complete_data_row['account_age'] = ld[0] - du.parse_date(str(account['date']))[0]
+    complete_data_row['account_age'] = ld[0] - du.parse_date(str(account['date']))[0]
 
 def fill_district_info(district):
     complete_data_row['no. of inhabitants'] = district['no. of inhabitants']
@@ -162,10 +153,10 @@ def fill_district_info(district):
     complete_data_row['no. of cities'] = district['no. of cities ']
     complete_data_row['ratio of urban inhabitants'] = district['ratio of urban inhabitants ']
     complete_data_row['average salary'] = district['average salary ']
-    #complete_data_row["unemploymant rate '95"] = district["unemploymant rate '95 "]
+    complete_data_row["unemploymant rate '95"] = district["unemploymant rate '95 "]
     complete_data_row["unemploymant rate '96"] = district["unemploymant rate '96 "]
     complete_data_row['no. of enterpreneurs per 1000 inhabitants'] = district['no. of enterpreneurs per 1000 inhabitants ']
-    #complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
+    complete_data_row["no. of commited crimes '95"] = district["no. of commited crimes '95 "]
     complete_data_row["no. of commited crimes '96"] = district["no. of commited crimes '96 "]
 
 def fill_disposition_info(acc_dispositions):
@@ -177,16 +168,14 @@ def fill_client_info(clients, acc_dispositions, acc_id, loan_date):
     loan_owner_age = du.calculate_loan_client_age(str(owner['birth_number']), loan_date)
 
     complete_data_row['age'] = loan_owner_age
-    #complete_data_row['gender'] = owner['gender']
+    complete_data_row['gender'] = owner['gender']
 
 def fill_card_info(cards, acc_dispositions):
     card_types = du.get_card_types_no(cards, acc_dispositions)
-    #complete_data_row['card_no'] = sum(card_types.values())
-    '''
+    complete_data_row['card_no'] = sum(card_types.values())
     complete_data_row['junior_card_no'] = card_types['junior']
     complete_data_row['classic_card_no'] = card_types['classic']
     complete_data_row['gold_card_no'] = card_types['gold']
-    '''
 
 def fill_transaction_info(transactions, acc_id, loan_date):
     ld = du.parse_date(loan_date)
@@ -203,27 +192,27 @@ def fill_transaction_info(transactions, acc_id, loan_date):
         'credits': [trans['amount'] for trans in last_trans if trans['type'] == 'credit'],
         'withdrawals_cash_op': [trans['amount'] for trans in last_trans if trans['operation'] == 'withdrawal in cash'],
         'remittances': [trans['amount'] for trans in last_trans if trans['operation'] == 'remittance to another bank'],
-        #'credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
+        'credit_card_withdrawals': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit card withdrawal'],
         'credits_cash': [trans['amount'] for trans in last_trans if trans['operation'] == 'credit in cash'],
         'other_bank_collections': [trans['amount'] for trans in last_trans if trans['operation'] == 'collection from another bank'],
         'k_missing': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'missing'],
         'interest_credited': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'interest credited'],
         'household': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'household'],
         'statement_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'payment for statement'],
-        #'insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
+        'insurrance_payments': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'insurrance payment'],
         'sanctions': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'sanction interest if negative balance'],
-        #'pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
+        'pension': [trans['amount'] for trans in last_trans if trans['k_symbol'] == 'old-age pension']
     }
 
     complete_data_row['transaction_no'] = len(acc_trans)
     complete_data_row['last_balance'] = last_trans[0]['balance']
     complete_data_row['negative_balance_no'] = negative_balance_no
-    #complete_data_row['standard_deviation_transactions'] = sd_trans
+    complete_data_row['standard_deviation_transactions'] = sd_trans
     complete_data_row['avg_monthly_income'] = du.calc_avg_monthly_income(acc_trans)
 
     for key, value in attrs.items():
         complete_data_row['avg_' + key] = np.mean(value) if len(value) > 0 else 0
-        #complete_data_row[key + '_no'] = len(value)
+        complete_data_row[key + '_no'] = len(value)
 
 # One hot encodes a single data piece given the possible set of labels
 def one_hot_encode(labels, data):
@@ -242,53 +231,6 @@ def one_hot_encode(labels, data):
             i += 1
 
     return encoded
-
-# Splits development csv data in two sets: training (2/3, equal number of cases) and testing (1/3)
-# ATTENTION: sklearn's train_test_split function should be used instead when possible
-def arrange_train_test_data(attr_data):
-    with open('./files/complete_data.csv') as complete_data_file, open('./files/train.csv', 'w', newline='') as train_file, open('./files/test.csv', 'w', newline='') as test_file:
-        complete_data_reader = csv.reader(complete_data_file, delimiter=';')
-        train_writer = csv.writer(train_file, delimiter=';')
-        test_writer = csv.writer(test_file, delimiter=';')
-
-        total_loans = attr_data['loan_status_appr'] + attr_data['loan_status_rej']
-        train_no = (total_loans * 2) // 3
-        test_no = total_loans - train_no
-        train_data = []
-        train_data_status = [0, 0] # Approved / rejected loan status count
-        i = 1
-
-        next(complete_data_reader)
-
-        for dev_row in complete_data_reader:
-            if i <= train_no:
-                # Train data is not immediately written to csv because it needs to be balanced first
-                train_data.append(dev_row)
-
-                # status must always be last attribute
-                if int(dev_row[len(dev_row) - 1]) == 0:
-                    train_data_status[0] += 1
-                else:
-                    train_data_status[1] += 1
-            else:
-                # test data can be written to csv since it must not be altered
-                test_writer.writerow(dev_row)
-
-            i += 1
-
-        # make it so there's an equal number of positive and negative training cases
-        max_cases = min(train_data_status)
-        train_data_status = [0, 0]
-
-        for train_row in train_data:
-            status = int(train_row[len(train_row) - 1])
-
-            if status == 0 and train_data_status[0] < max_cases:
-                train_data_status[0] += 1
-                train_writer.writerow(train_row)
-            elif status == 1 and train_data_status[1] < max_cases:
-                train_data_status[1] += 1
-                train_writer.writerow(train_row)
 
 # Copies and changes some csv data to new, 'cleaned' files
 def clean_data(attr_data, outlier_removal=False):
