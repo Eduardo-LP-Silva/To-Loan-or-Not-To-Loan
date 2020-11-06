@@ -1,7 +1,6 @@
-
 import csv
 import argparse
-from os import sep
+from os import path
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
@@ -15,7 +14,10 @@ def arrange_complete_data(train, clean=False, outlier_removal=False):
     complete_data_row.clear()
     attr_data = du.analyse_data()
 
-    if clean or outlier_removal:
+    if clean or outlier_removal or not (path.isfile('./files/client_clean.csv') 
+        and path.isfile('./files/disp_clean.csv') and path.isfile('district_clean.csv') 
+        and path.isfile('loan_train_clean.csv') and path.isfile('trans_test_clean.csv') 
+        and path.isfile('trans_train_clean.csv')):
         clean_data(attr_data, outlier_removal)
 
     loan_path, card_path, transaction_path = '', '', ''
